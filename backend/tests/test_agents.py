@@ -17,3 +17,6 @@ def test_agent_catalogue_and_run_are_auditable(tmp_path: Path):
     assert result["steps"][-1]["tool"] == "retrieve_evidence"
     assert result["answer"]["citations"]
     assert any(tool["id"] == "execute_code" and tool["approval_required"] for tool in tool_catalogue())
+    council = engine.agents.workflow("research-council", "What does Mwenza store?", {source.id})
+    assert council["status"] == "completed"
+    assert len(council["stages"]) == 4

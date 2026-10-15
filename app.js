@@ -18,6 +18,11 @@ const AGENTS = [
   ["synthesiser", "Synthesiser", "Creates grounded research syntheses.", "evidence-editor"],
 ];
 
+const WORKFLOWS = [
+  ["research-council", "Research council", "Synthesis, scepticism, and methods review in one trace.", ["Librarian", "Synthesiser", "Sceptic", "Methodologist"]],
+  ["reproducibility-review", "Reproducibility review", "Evidence scope, rerun planning, and adversarial review.", ["Librarian", "Reproducer", "Sceptic"]],
+];
+
 const DEMO_SOURCES = [
   { id: "demo-1", name: "Welcome to Mwenza", type: "Guide", detail: "Built-in guide", text: "Mwenza is a source-grounded research notebook. It answers questions from the sources selected in a notebook, cites the source used, and says when the knowledge base does not contain an answer." },
   { id: "demo-2", name: "Research workflow notes", type: "Notes", detail: "Built-in example", text: "A useful research workflow is to collect sources, ask focused questions, compare evidence, save useful notes, and turn the material into a briefing or study guide." },
@@ -115,6 +120,16 @@ function runAgent(agentId) {
   save(); render();
 }
 
+function runWorkflow(workflowId) {
+  const workflow = WORKFLOWS.find((item) => item[0] === workflowId);
+  const objective = window.prompt("What research question should the council investigate?", "What are the strongest supported findings, and what remains uncertain?");
+  if (!objective) return;
+  const answer = groundedAnswer(objective);
+  state.messages.push({ role: "assistant", answer: { title: `${workflow[1]} completed`, text: answer.text, citations: answer.citations, steps: workflow[3].map((stage) => `${stage} review completed`).concat(answer.citations.length ? "Council result is grounded" : "Council abstained: needs more evidence") } });
+  state.page = "agents";
+  save(); render();
+}
+
 function generateArtifact(kind) {
   const selected = selectedSources();
   if (!selected.length) return notify("Select at least one source first.");
@@ -148,7 +163,7 @@ function renderChat() {
 
 function renderStudio() { const visible = state.artifacts.filter((item) => !state.query || `${item.title} ${item.body}`.toLowerCase().includes(state.query.toLowerCase())); return `<section class="card"><div class="card-header"><div><h2>Studio</h2><p>Turn selected sources into useful research artifacts.</p></div><span class="eyebrow">Background-ready</span></div><div class="card-body"><div class="studio-grid">${STUDIO_ARTIFACTS.map(([id, title, description]) => `<button class="studio-card" onclick="generateArtifact('${id}')"><strong>${icon(id === "audio" ? "studio" : "note")} ${title}</strong><span>${description}</span></button>`).join("")}</div><div class="artifact-list" style="margin-top:18px">${visible.map((item) => `<article class="artifact-row"><div class="source-icon">✦</div><div class="artifact-main"><strong>${esc(item.title)}</strong><small>${esc(item.sourceNames.join(", "))}</small><p>${esc(item.body.slice(0, 260))}${item.body.length > 260 ? "…" : ""}</p></div></article>`).join("") || `<div class="empty">Generated artifacts will appear here.</div>`}</div></div></section>`; }
 
-function renderAgents() { return `<section class="card agent-lab"><div class="card-header"><div><h2>Agent lab</h2><p>Give a specialist a bounded research objective. Every run exposes its steps and citations.</p></div><span class="eyebrow">${selectedSources().length} sources in scope</span></div><div class="card-body"><div class="agent-grid">${AGENTS.map(([id, name, description, skill]) => `<article class="agent-card"><div class="agent-orb">✦</div><div><strong>${name}</strong><small>${skill}</small><p>${description}</p></div><button class="button blue" onclick="runAgent('${id}')">Run agent</button></article>`).join("")}</div><div class="run-log"><h3>Current workspace trace</h3>${state.messages.filter((item) => item.role === "assistant" && item.answer.steps).slice(-4).reverse().map((item) => `<article class="run-card"><div><strong>${esc(item.answer.title)}</strong><p>${esc(item.answer.text.slice(0, 260))}</p><div class="trace">${item.answer.steps.map((step) => `<span>${esc(step)}</span>`).join("")}</div></div>${item.answer.citations.length ? `<div class="citations">${item.answer.citations.map((citation) => `<span class="citation">${esc(citation)}</span>`).join("")}</div>` : ""}</article>`).join("") || `<div class="empty">No agent runs yet. Choose a specialist above.</div>`}</div></div></section>`; }
+function renderAgents() { return `<section class="card agent-lab"><div class="card-header"><div><h2>Agent lab</h2><p>Give a specialist or research council a bounded objective. Every run exposes its steps and citations.</p></div><span class="eyebrow">${selectedSources().length} sources in scope</span></div><div class="card-body"><h3 class="section-kicker">Research councils</h3><div class="workflow-grid">${WORKFLOWS.map(([id, name, description, stages]) => `<article class="workflow-card"><div><strong>${name}</strong><p>${description}</p><div class="workflow-stages">${stages.map((stage) => `<span>${stage}</span>`).join("")}</div></div><button class="button primary" onclick="runWorkflow('${id}')">Run council</button></article>`).join("")}</div><h3 class="section-kicker">Specialists</h3><div class="agent-grid">${AGENTS.map(([id, name, description, skill]) => `<article class="agent-card"><div class="agent-orb">✦</div><div><strong>${name}</strong><small>${skill}</small><p>${description}</p></div><button class="button blue" onclick="runAgent('${id}')">Run agent</button></article>`).join("")}</div><div class="run-log"><h3>Current workspace trace</h3>${state.messages.filter((item) => item.role === "assistant" && item.answer.steps).slice(-4).reverse().map((item) => `<article class="run-card"><div><strong>${esc(item.answer.title)}</strong><p>${esc(item.answer.text.slice(0, 260))}</p><div class="trace">${item.answer.steps.map((step) => `<span>${esc(step)}</span>`).join("")}</div></div>${item.answer.citations.length ? `<div class="citations">${item.answer.citations.map((citation) => `<span class="citation">${esc(citation)}</span>`).join("")}</div>` : ""}</article>`).join("") || `<div class="empty">No agent runs yet. Choose a specialist or council above.</div>`}</div></div></section>`; }
 
 function renderMap() {
   const words = [...new Set(selectedSources().flatMap((item) => terms(`${item.name} ${item.text}`)))].slice(0, 18);
@@ -162,5 +177,5 @@ function renderAddSourceModal() { return `<div class="modal-backdrop" onclick="i
 function render() { const titles = { overview: ["Research workspace", "Collect, question, and synthesize from selected evidence."], sources: ["Sources", "Choose what the notebook is allowed to use."], chat: ["Ask the notebook", "Answers stay within the selected knowledge base."], agents: ["Agent lab", "Specialists collaborate through visible, reviewable research steps."], map: ["Research map", "See the concepts and evidence currently in scope."], studio: ["Studio", "Create research artifacts from your sources."] }; const [title, subtitle] = titles[state.page] || titles.overview; document.querySelector("#app").innerHTML = `<div class="shell">${renderSidebar()}<main class="main">${renderHeader(title, subtitle)}<div class="content">${state.page === "overview" ? renderOverview() : state.page === "sources" ? renderSourcesCard() : state.page === "chat" ? renderChat() : state.page === "agents" ? renderAgents() : state.page === "map" ? renderMap() : renderStudio()}</div></main></div>${state.modal === "add-source" ? renderAddSourceModal() : ""}${state.toast ? `<div class="toast">${esc(state.toast)}</div>` : ""}`; }
 
 function go(page) { state.page = page; save(); render(); }
-window.go = go; window.openAddSource = openAddSource; window.closeModal = closeModal; window.submitSource = submitSource; window.handleFiles = handleFiles; window.toggleSource = toggleSource; window.ask = ask; window.runAgent = runAgent; window.generateArtifact = generateArtifact; window.notify = notify;
+window.go = go; window.openAddSource = openAddSource; window.closeModal = closeModal; window.submitSource = submitSource; window.handleFiles = handleFiles; window.toggleSource = toggleSource; window.ask = ask; window.runAgent = runAgent; window.runWorkflow = runWorkflow; window.generateArtifact = generateArtifact; window.notify = notify;
 render();

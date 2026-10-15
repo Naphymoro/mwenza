@@ -26,6 +26,12 @@ class AgentRunRequest(BaseModel):
     source_ids: set[str] | None = None
 
 
+class WorkflowRunRequest(BaseModel):
+    workflow_id: str = Field(min_length=2, max_length=80)
+    objective: str = Field(min_length=2, max_length=4000)
+    source_ids: set[str] | None = None
+
+
 @app.get("/health")
 def health() -> dict[str, object]:
     return {"ok": True, "sources": len(engine.sources), "evidence_spans": len(engine.evidence), "graph_entities": len(engine.entities), "graph_relations": len(engine.relations)}
@@ -84,3 +90,11 @@ def run_agent(request: AgentRunRequest) -> dict[str, object]:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return engine.agents.serialise_run(run)
+
+
+@app.post("/workflows/run")
+def run_workflow(request: WorkflowRunRequest) -> dict[str, object]:
+    try:
+        return engine.agents.workflow(request.workflow_id, request.objective, request.source_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

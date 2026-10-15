@@ -57,6 +57,11 @@ AGENTS: tuple[AgentSpec, ...] = (
     AgentSpec("synthesiser", "Synthesiser", "Grounded research synthesiser", "Produces a concise evidence-backed synthesis.", ("evidence-editor", "claim-extractor"), ("Cite every material claim.", "Abstain when evidence is insufficient.")),
 )
 
+WORKFLOWS: tuple[dict[str, Any], ...] = (
+    {"id": "research-council", "name": "Research council", "description": "Synthesize evidence, challenge it, and review the method.", "stages": ("librarian", "synthesiser", "skeptic", "methodologist")},
+    {"id": "reproducibility-review", "name": "Reproducibility review", "description": "Assess whether a proposed result can be rerun and audited.", "stages": ("librarian", "reproducer", "skeptic")},
+)
+
 
 def _serialise_skill(skill: Skill) -> dict[str, Any]:
     return asdict(skill)
@@ -83,7 +88,7 @@ class AgentOrchestrator:
         self.runs: dict[str, AgentRun] = {}
 
     def catalogue(self) -> dict[str, Any]:
-        return {"agents": [_serialise_agent(item) for item in AGENTS], "skills": [_serialise_skill(item) for item in SKILLS], "principles": ["evidence-first", "abstain-on-missing-evidence", "human-review", "reproducible-runs", "least-privilege-tools"]}
+        return {"agents": [_serialise_agent(item) for item in AGENTS], "skills": [_serialise_skill(item) for item in SKILLS], "workflows": list(WORKFLOWS), "principles": ["evidence-first", "abstain-on-missing-evidence", "human-review", "reproducible-runs", "least-privilege-tools"]}
 
     def run(self, agent_id: str, objective: str, source_ids: set[str] | None = None) -> AgentRun:
         agent = next((item for item in AGENTS if item.id == agent_id), None)
@@ -105,3 +110,15 @@ class AgentOrchestrator:
         if run.answer:
             result["answer"] = {"text": run.answer.text, "grounded": run.answer.grounded, "abstained": run.answer.abstained, "reason": run.answer.reason, "citations": [asdict(item) for item in run.answer.citations]}
         return result
+
+    def workflow(self, workflow_id: str, objective: str, source_ids: set[str] | None = None) -> dict[str, Any]:
+        workflow = next((item for item in WORKFLOWS if item["id"] == workflow_id), None)
+        if workflow is None:
+            raise ValueError(f"Unknown workflow: {workflow_id}")
+        stages = []
+        for agent_id in workflow["stages"]:
+            run = self.run(agent_id, objective, source_ids)
+            stages.append(self.serialise_run(run))
+        grounded = all(stage.get("answer", {}).get("grounded", False) for stage in stages)
+        citations = sorted({citation["source_id"] for stage in stages for citation in stage.get("answer", {}).get("citations", [])})
+        return {"workflow_id": workflow_id, "objective": objective, "status": "completed" if grounded else "needs-review", "stages": stages, "citation_source_ids": citations}
