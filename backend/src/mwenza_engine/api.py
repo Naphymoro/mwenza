@@ -7,9 +7,12 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from .pipeline import NotebookEngine
+from .model_gateway import ModelGateway
+from .tools import tool_catalogue
 
 app = FastAPI(title="Mwenza Evidence Engine", version="0.1.0")
 engine = NotebookEngine()
+model_gateway = ModelGateway()
 
 
 class QueryRequest(BaseModel):
@@ -57,6 +60,16 @@ def query(request: QueryRequest) -> dict[str, object]:
 @app.get("/agents")
 def agents() -> dict[str, object]:
     return engine.agents.catalogue()
+
+
+@app.get("/capabilities")
+def capabilities() -> dict[str, object]:
+    return {"tools": tool_catalogue(), "model_gateway": model_gateway.status().__dict__}
+
+
+@app.get("/graph")
+def graph() -> dict[str, object]:
+    return {"entities": [item.__dict__ for item in engine.entities], "relations": [item.__dict__ for item in engine.relations], "warning": "Relations are candidate co-occurrences unless explicitly human-validated."}
 
 
 @app.get("/agents/runs")

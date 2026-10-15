@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .models import Answer
+from .tools import tools_for_skills
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,9 @@ def _serialise_skill(skill: Skill) -> dict[str, Any]:
 
 
 def _serialise_agent(agent: AgentSpec) -> dict[str, Any]:
-    return asdict(agent)
+    result = asdict(agent)
+    result["tools"] = tools_for_skills(agent.skills, SKILLS)
+    return result
 
 
 class AgentOrchestrator:

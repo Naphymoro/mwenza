@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from mwenza_engine.pipeline import NotebookEngine
+from mwenza_engine.tools import tool_catalogue
 
 
 def test_agent_catalogue_and_run_are_auditable(tmp_path: Path):
@@ -15,3 +16,4 @@ def test_agent_catalogue_and_run_are_auditable(tmp_path: Path):
     assert result["status"] == "completed"
     assert result["steps"][-1]["tool"] == "retrieve_evidence"
     assert result["answer"]["citations"]
+    assert any(tool["id"] == "execute_code" and tool["approval_required"] for tool in tool_catalogue())

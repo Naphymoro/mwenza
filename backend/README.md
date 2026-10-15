@@ -21,4 +21,9 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, and `POST /query`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `GET /capabilities`, and `GET /graph`.
+
+The model gateway is provider-neutral and offline by default. Set
+`MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
+adapter; actual model calls must be implemented behind that boundary with
+source citations, prompt-injection isolation, and run provenance preserved.
