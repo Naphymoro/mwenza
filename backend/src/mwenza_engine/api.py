@@ -17,6 +17,12 @@ class QueryRequest(BaseModel):
     source_ids: set[str] | None = None
 
 
+class AgentRunRequest(BaseModel):
+    agent_id: str = Field(min_length=2, max_length=80)
+    objective: str = Field(min_length=2, max_length=4000)
+    source_ids: set[str] | None = None
+
+
 @app.get("/health")
 def health() -> dict[str, object]:
     return {"ok": True, "sources": len(engine.sources), "evidence_spans": len(engine.evidence), "graph_entities": len(engine.entities), "graph_relations": len(engine.relations)}
@@ -46,3 +52,22 @@ async def upload_source(file: UploadFile = File(...)) -> dict[str, object]:
 def query(request: QueryRequest) -> dict[str, object]:
     answer = engine.query(request.question, request.source_ids)
     return {"text": answer.text, "grounded": answer.grounded, "abstained": answer.abstained, "reason": answer.reason, "citations": [citation.__dict__ for citation in answer.citations], "retrieval_scores": answer.retrieval_scores}
+
+
+@app.get("/agents")
+def agents() -> dict[str, object]:
+    return engine.agents.catalogue()
+
+
+@app.get("/agents/runs")
+def agent_runs() -> list[dict[str, object]]:
+    return [engine.agents.serialise_run(run) for run in engine.agents.runs.values()]
+
+
+@app.post("/agents/run")
+def run_agent(request: AgentRunRequest) -> dict[str, object]:
+    try:
+        run = engine.agents.run(request.agent_id, request.objective, request.source_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return engine.agents.serialise_run(run)

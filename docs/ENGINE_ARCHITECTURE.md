@@ -26,3 +26,17 @@ The atomic unit of knowledge is an `EvidenceSpan`. It contains the source ID, pa
 - Human review workflow for entity resolution and graph edges.
 - PDF table, figure, and reading-order benchmark.
 - Prompt-injection isolation for untrusted source content.
+
+## Agent operating model
+
+Mwenza agents are governed specialists, not unconstrained chat personas. Each
+agent has a declared role, a small skill set, operating rules, and a visible
+run trace. The first implementation uses deterministic retrieval so the
+system can be tested without a model key. Future model adapters must preserve
+the same contract: selected-source scope, least-privilege tools, evidence
+citations, abstention, and a durable run record.
+
+The initial roles are Librarian, Methodologist, Sceptic, Reproducer, Scout,
+and Synthesiser. High-impact capabilities such as code execution, external
+discovery, and reverse engineering must remain separate tools with explicit
+permissions, provenance, and human approval.

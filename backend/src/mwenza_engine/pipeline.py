@@ -6,6 +6,7 @@ from .graph import extract_graph
 from .ingest import ingest_path
 from .models import Answer, Citation, Entity, EvidenceSpan, Relation, SourceRecord
 from .retrieval import HybridRetriever
+from .agents import AgentOrchestrator
 
 
 class NotebookEngine:
@@ -14,6 +15,7 @@ class NotebookEngine:
         self.entities: list[Entity] = []
         self.relations: list[Relation] = []
         self.retriever = HybridRetriever()
+        self.agents = AgentOrchestrator(self.query, lambda: len(self.sources), lambda: len(self.evidence))
 
     @property
     def evidence(self) -> list[EvidenceSpan]:
