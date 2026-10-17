@@ -89,13 +89,13 @@ def test_tool_errors_are_reported_not_raised():
 def test_methodology_tools_match_the_engine():
     async def scenario(client):
         design = {key: list(value) if isinstance(value, tuple) else value for key, value in COHERENT.__dict__.items()}
-        thread = payload(await client.call_tool("check_golden_thread", {"design": design}))
+        thread = payload(await client.call_tool("check_golden_thread", {"design": design, "wording": "researcher's own words"}))
         flawed = SEEDED["interpretivism with a quantitative survey"][0]
-        method = payload(await client.call_tool("check_paradigm_fit", {"design": {key: list(value) if isinstance(value, tuple) else value for key, value in flawed.__dict__.items()}}))
+        method = payload(await client.call_tool("check_paradigm_fit", {"design": {key: list(value) if isinstance(value, tuple) else value for key, value in flawed.__dict__.items()}, "wording": "researcher's own words"}))
         audit = payload(await client.call_tool("audit_citations", {
             "text": DRAFT,
             "sources": [{"name": "Wanjiru & Otieno 2019 - Distance and facility delivery", "text": WANJIRU}, {"name": "Achieng 2021 - Decision-making autonomy", "text": ACHIENG, "id": "achieng"}],
-            "references": {"ref-1": "achieng"},
+            "references": {"ref-1": "achieng"}, "wording": "researcher's own words",
         }))
         return thread, method, audit
 
@@ -104,6 +104,22 @@ def test_methodology_tools_match_the_engine():
     assert method["status"] == "needs-revision" and any(issue["check"] == "paradigm-approach" for issue in method["issues"])
     verdicts = [sentence["citations"][0]["verdict"] if sentence["citations"] else (sentence["flags"][0] if sentence["flags"] else None) for sentence in audit["sentences"]]
     assert verdicts == EXPECTED
+    assert thread["input_wording"] == "researcher's own words" and "confirm_with_researcher" not in thread
+
+
+def test_methodology_tools_refuse_empty_input_and_flag_paraphrase():
+    async def scenario(client):
+        empty = await client.call_tool("check_golden_thread", {"design": {}, "wording": "agent paraphrase"})
+        no_wording = await client.call_tool("check_golden_thread", {"design": {"aim": "[SYNTHETIC] To explore teacher feedback"}})
+        paraphrased = payload(await client.call_tool("check_paradigm_fit", {"design": {"paradigm": "interpretivism", "strategy": "case study"}, "wording": "agent paraphrase"}))
+        no_sources = await client.call_tool("audit_citations", {"text": "Rainfall shapes yields (Wanjiru, 2019).", "sources": [], "wording": "researcher's own words"})
+        return empty, no_wording, paraphrased, no_sources
+
+    empty, no_wording, paraphrased, no_sources = run(scenario)
+    assert empty.is_error and "Ask the researcher" in empty.content[0].text
+    assert no_wording.is_error
+    assert paraphrased["input_wording"] == "agent paraphrase" and "Confirm the paraphrase" in paraphrased["confirm_with_researcher"]
+    assert no_sources.is_error
 
 
 def test_navigator_tool_walks_the_tree():

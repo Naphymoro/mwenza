@@ -72,3 +72,9 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## MCP server
 
 `mcp_server.py` wraps open discovery and the three methodology checks as MCP tools using the official Python SDK (an optional dependency). Network-bound tools run in worker threads so one slow search does not block other sessions, discovery errors become MCP tool errors with their message, and responses use a compact record shape so agents receive licence, preprint and retraction information without internal fields. The server is tested in memory with the SDK's client and end to end over stdio and streamable HTTP, including with Mwenza's own MCP client in `discovery.py`.
+
+The checks require a `wording` argument (the researcher's own words, or an agent paraphrase that the agent must confirm with them) and refuse empty input, so the tools enforce their own preconditions rather than trusting an agent's prompt.
+
+## Constitution
+
+`constitution.py` holds the rules no prompt, skill or self-improvement step may relax, as deterministic checks on a reply before a student sees it. **Grounding:** every DOI, link and author-year citation must match evidence held in the conversation, meaning a Mwenza tool result or the student's own text. Retracted works are blocked and preprints must be named as such. **Integrity:** a long, declarative paragraph that does not address the student (no "you", no questions, not a list) reads as paste-ready thesis text and is flagged. `review_reply` returns the findings, `correction_prompt` asks the agent to revise, and `remediate` labels what could not be fixed without deleting it. The prose rule is a word-count heuristic and stays advisory in effect: the agent is asked once, then the paragraph is labelled as an annotated example. The module is standard-library only so the DeerFlow middleware in `integrations/deerflow/` can vendor it unchanged.

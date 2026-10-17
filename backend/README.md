@@ -141,6 +141,8 @@ python -m pip install -e '.[mcp]'
 
 All tools are read-only. Results are compact records carrying licence, preprint, retraction and published-version fields, and the server's instructions tell agents how to use them (cite preprints as not peer reviewed, never use retracted work as evidence, store abstracts only when `abstract_storable` is true). The resource `mwenza://data-sources` lists each source's licence and rate limit.
 
+The three checks take a required `wording` argument, `researcher's own words` or `agent paraphrase`, so an agent cannot quietly check text it wrote itself: a paraphrase comes back with `confirm_with_researcher`. An empty design, or an audit without source texts, is refused with what to ask the researcher for.
+
 **Claude Code** (stdio, run from this `backend` folder after installing):
 
 ```bash
@@ -153,4 +155,6 @@ claude mcp add mwenza -e MWENZA_OPENALEX_KEY=your-key -- mwenza-mcp
 {"mcpServers": {"mwenza": {"command": "mwenza-mcp", "env": {"MWENZA_OPENALEX_KEY": "your-key", "MWENZA_CONTACT_EMAIL": "library@your-institution.example"}}}}
 ```
 
-**HTTP** for other agents: `mwenza-mcp --transport http --port 8766` serves `http://127.0.0.1:8766/mcp`. It binds to localhost and has no authentication, so put it behind an authenticating proxy before exposing it beyond the machine. Request URLs are not logged, because the OpenAlex key travels in them.
+**HTTP** for other agents: `mwenza-mcp --transport http --port 8766` serves `http://127.0.0.1:8766/mcp`. It binds to localhost and has no authentication, so put it behind an authenticating proxy before exposing it beyond the machine. Request URLs are not logged, because the OpenAlex key travels in them. In a container on a private network, bind `--host 0.0.0.0` and name the hostnames clients use with `--allowed-host` (repeatable), which keeps DNS-rebinding protection on.
+
+**DeerFlow**: `integrations/deerflow/` runs this server beside a Dockerised DeerFlow and installs the Mwenza skill, agent and constitution middleware; see its README.

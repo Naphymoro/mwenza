@@ -5,6 +5,11 @@ Run over stdio for a local client, or streamable HTTP (localhost by default):
 
     python -m mwenza_engine.mcp_server
     python -m mwenza_engine.mcp_server --transport http --port 8766
+
+In a container on a private Docker network (DeerFlow), bind all interfaces and name the hostnames
+clients use, so DNS-rebinding protection stays on:
+
+    python -m mwenza_engine.mcp_server --transport http --host 0.0.0.0 --allowed-host mwenza-mcp
 """
 
 from __future__ import annotations
@@ -18,6 +23,7 @@ from typing import Annotated, Any, Literal
 import anyio
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
@@ -38,9 +44,26 @@ When you use results:
 - Store or quote an abstract only when abstract_storable is true; otherwise link to the work. Works with link_only=true must be read on their host site.
 - Results matched only in the full text (match="full text") may be less relevant.
 - The methodology checks flag what to examine; they do not replace a supervisor's judgement, and they never rewrite the researcher's text.
+- Check the researcher's own words. Never draft a design or a paragraph for them in order to check it; if something is missing, ask them for it.
 Data: OpenAlex, DOAJ, OpenCitations and arXiv metadata are CC0; other licences are per record."""
 
 ABSTRACT_CHARS = 1500
+
+Wording = Annotated[Literal["researcher's own words", "agent paraphrase"], Field(description="Whose words the input is. Use 'agent paraphrase' if you summarised or reworded anything; the result then asks you to confirm it with the researcher before reporting it.")]
+PARAPHRASE_NOTE = "You paraphrased the researcher's words. Confirm the paraphrase with them before reporting this status; the status describes your wording, not theirs."
+
+
+def require_content(values: dict[str, Any], fields: tuple[str, ...], ask: str) -> None:
+    """Refuse to check an empty input: the agent should ask the researcher, not fill the gaps itself."""
+    if not any(values.get(name) for name in fields):
+        raise ToolError(f"Nothing to check yet. Ask the researcher for {ask} in their own words. Do not draft them yourself.")
+
+
+def with_wording(result: dict[str, Any], wording: str) -> dict[str, Any]:
+    result["input_wording"] = wording
+    if wording == "agent paraphrase":
+        result["confirm_with_researcher"] = PARAPHRASE_NOTE
+    return result
 
 
 def compact(work: OpenWork) -> dict[str, Any]:
@@ -151,14 +174,18 @@ def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
         return {"doi": doi, "published": await call(engine.published_version, doi)}
 
     @server.tool(title="Check golden thread", annotations=local)
-    def check_golden_thread(design: DesignInput) -> dict[str, Any]:
+    def check_golden_thread(design: DesignInput, wording: Wording) -> dict[str, Any]:
         """Check that a research design's problem, gap, aim, objectives, questions, theory, design and analysis hold together; returns linked elements, issues with teaching notes and a status."""
-        return GoldenThreadChecker().check(ResearchDesign.from_dict(design.model_dump())).to_dict()
+        values = design.model_dump()
+        require_content(values, ("problem", "aim", "questions", "objectives"), "their research problem, aim and questions")
+        return with_wording(GoldenThreadChecker().check(ResearchDesign.from_dict(values)).to_dict(), wording)
 
     @server.tool(title="Check paradigm-method fit", annotations=local)
-    def check_paradigm_fit(design: MethodInput) -> dict[str, Any]:
+    def check_paradigm_fit(design: MethodInput, wording: Wording) -> dict[str, Any]:
         """Check that approach to theory, strategy, time horizon, sampling, data collection, analysis and quality criteria follow from the paradigm; conflicts include coherent alternatives."""
-        return ParadigmMethodChecker().check(MethodDesign.from_dict(design.model_dump())).to_dict()
+        values = design.model_dump()
+        require_content(values, ("paradigm", "approach", "strategy"), "their paradigm, approach and research strategy")
+        return with_wording(ParadigmMethodChecker().check(MethodDesign.from_dict(values)).to_dict(), wording)
 
     @server.tool(title="Navigate methodology", annotations=local)
     def navigate_methodology(
@@ -172,8 +199,9 @@ def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
 
     @server.tool(title="Audit citations", annotations=local)
     def audit_citations(
-        text: Annotated[str, Field(min_length=1, max_length=200_000, description="Draft text with citations such as (Ouma, 2021), Ouma (2021) or [1]")],
-        sources: Annotated[list[SourceInput], Field(max_length=100, description="The cited sources, with their text")],
+        text: Annotated[str, Field(min_length=1, max_length=200_000, description="The researcher's draft text with citations such as (Ouma, 2021), Ouma (2021) or [1]")],
+        sources: Annotated[list[SourceInput], Field(min_length=1, max_length=100, description="The cited sources, with their text. Ask the researcher for them if you do not have them; never reconstruct a source's text from memory.")],
+        wording: Wording,
         references: Annotated[dict[str, str], Field(description="Optional links from citation keys (e.g. 'ref-1', 'ouma-2021') to source ids")] = {},
     ) -> dict[str, Any]:
         """Check each cited sentence against the source it cites: supported, partial, possible contrast, number not in source, unrelated or unresolved; uncited factual claims are flagged."""
@@ -183,7 +211,7 @@ def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
             record = extract_text_file(Path("source.txt"), source_id, item.text.encode("utf-8"))
             record.name = item.name
             records[source_id] = record
-        return CitationAuditor().audit(text, records, references).to_dict()
+        return with_wording(CitationAuditor().audit(text, records, references).to_dict(), wording)
 
     @server.resource("mwenza://data-sources", name="data-sources", title="Data sources and licences", mime_type="application/json")
     def data_sources() -> str:
@@ -198,12 +226,21 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--transport", choices=("stdio", "http"), default="stdio")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP only. Keep 127.0.0.1 unless the server sits behind authentication.")
     parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument("--allowed-host", action="append", default=[], help="HTTP only. A hostname clients may use (repeatable); keeps DNS-rebinding protection on when binding beyond localhost.")
     args = parser.parse_args(argv)
     server = build_server()
     if args.transport == "stdio":
         server.run("stdio")
     else:
-        server.run("streamable-http", host=args.host, port=args.port)
+        server.run("streamable-http", host=args.host, port=args.port, transport_security=transport_security(args.allowed_host))
+
+
+def transport_security(hosts: list[str]) -> TransportSecuritySettings | None:
+    """None keeps the SDK default (protection on for localhost binds); named hosts are allowed with any port."""
+    if not hosts:
+        return None
+    allowed = [*hosts, "127.0.0.1", "localhost"]
+    return TransportSecuritySettings(enable_dns_rebinding_protection=True, allowed_hosts=[f"{host}:*" for host in allowed] + allowed, allowed_origins=[f"http://{host}:*" for host in allowed])
 
 
 if __name__ == "__main__":
