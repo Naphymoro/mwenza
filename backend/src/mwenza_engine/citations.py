@@ -326,3 +326,12 @@ class CitationAuditor:
         if check.verdict == "partial" and missing_terms:
             check.notes.append(f"Claim terms not in the passage: {', '.join(missing_terms[:8])}.")
         return check
+
+
+def audit_flags(report: AuditReport) -> list[dict[str, str]]:
+    flags = []
+    for sentence in report.sentences:
+        if sentence.severity in {"error", "warning"}:
+            verdicts = [check.verdict for check in sentence.citations if check.severity in {"error", "warning"}] + sentence.flags
+            flags.append({"anchor": sentence.text, "severity": sentence.severity, "verdict": ", ".join(verdicts), "message": "; ".join(dict.fromkeys(verdicts))})
+    return flags

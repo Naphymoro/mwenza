@@ -46,7 +46,7 @@ SKILLS: tuple[Skill, ...] = (
     Skill("citation-auditor", "Citation auditor", "Verify that each cited source supports the claim made about it.", ("audit_citations", "retrieve_evidence")),
     Skill("contradiction-hunter", "Contradiction hunter", "Compare source-backed passages and identify disagreements that require inspection.", ("retrieve_evidence", "compare_evidence"), "medium"),
     Skill("research-scout", "Research scout", "Prepare a lawful, provenance-preserving discovery plan for future connectors.", ("plan_connector",), "medium"),
-    Skill("reproducer", "Reproducer", "Define a reproducible analysis run and record its inputs, code, and outputs.", ("plan_run",), "high"),
+    Skill("reproducer", "Reproducer", "Define a reproducible analysis run and record its inputs, code, and outputs.", ("plan_run", "inspect_provenance"), "high"),
     Skill("evidence-editor", "Evidence editor", "Draft concise research artefacts with citations and explicit uncertainty.", ("retrieve_evidence", "draft_artifact")),
 )
 

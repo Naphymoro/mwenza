@@ -19,6 +19,7 @@ const AUDIT_STATUS = {
   "needs-revision": ["Needs revision", "At least one citation may misrepresent its source, misquote a number, or cite a source that doesn't discuss the claim."],
 };
 
+const AUDIT_DOCUMENT = "citation-draft";
 let auditRequest = null;
 
 function auditState() {
@@ -34,6 +35,7 @@ function loadAuditExample() {
     if (!source(example.id)) state.sources.unshift({ ...example });
     if (!state.selectedSourceIds.includes(example.id)) state.selectedSourceIds.push(example.id);
   });
+  recordPaste(AUDIT_DOCUMENT, AUDIT_EXAMPLE_DRAFT);
   Object.assign(audit, { text: AUDIT_EXAMPLE_DRAFT, auditedText: "", report: null, error: "", focus: null, references: {} });
   save(); render(); notify("Example draft and two example papers added. Run the audit to see what it finds.");
 }
@@ -59,7 +61,9 @@ async function runAudit() {
     const sourceIds = await syncSelectedSources(auditRequest.signal);
     audit.references = Object.fromEntries(Object.entries(audit.references).filter(([, id]) => sourceIds.includes(id)));
     const text = audit.text;
-    audit.report = await enginePost("/citations/audit", { text, source_ids: sourceIds, references: audit.references }, auditRequest.signal);
+    audit.report = await enginePost("/citations/audit", { text, source_ids: sourceIds, references: audit.references, document_id: AUDIT_DOCUMENT, pasted_segments: pendingPastes(AUDIT_DOCUMENT) }, auditRequest.signal);
+    clearPastes(AUDIT_DOCUMENT);
+    markProvenanceStale();
     audit.auditedText = text;
   } catch (error) {
     if (error.name === "AbortError") return;
@@ -131,7 +135,7 @@ function renderCitationAudit() {
     <div class="gt-layout">
       ${renderAuditResults(audit)}
       <form class="gt-form" onsubmit="event.preventDefault(); runAudit()">
-        <label class="gt-field"><span>Draft text</span><textarea rows="12" placeholder="Paste a paragraph or section with citations, e.g. (Ouma, 2021), Ouma et al. (2021) or [3]." oninput="auditText(this.value)">${esc(audit.text)}</textarea></label>
+        <label class="gt-field"><span>Draft text</span><textarea rows="12" placeholder="Paste a paragraph or section with citations, e.g. (Ouma, 2021), Ouma et al. (2021) or [3]." oninput="auditText(this.value)" onpaste="${pasteHandler(AUDIT_DOCUMENT)}">${esc(audit.text)}</textarea></label>
         <p class="ca-hint">Author–year citations are matched to selected sources by surname and year in the source's name or opening text. Numbered citations such as [3] need linking once; Mwenza remembers the link.</p>
         <div class="gt-submit">${renderEngineField()}<button class="gt-btn primary" type="submit" ${busy ? "disabled" : ""}>${busy ? "Auditing…" : "Audit citations"}</button></div>
       </form>

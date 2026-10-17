@@ -24,3 +24,23 @@ async function syncSelectedSources(signal) {
 function renderEngineField() {
   return `<label class="gt-engine"><span>Engine</span><input value="${esc(engineUrl())}" aria-label="Engine URL" onchange="setEngineUrl(this.value)" /></label>`;
 }
+
+async function engineGet(path, signal) {
+  const response = await fetch(`${engineUrl()}${path}`, { signal });
+  if (!response.ok) throw new Error(`The engine rejected the request to ${path} (HTTP ${response.status}).`);
+  return response.json();
+}
+
+// Paste reports feed the provenance ledger. Inserted examples are recorded the
+// same way, so text the student did not write is never attributed to them.
+function recordPaste(documentId, text) {
+  const value = String(text || "");
+  if (!value.trim()) return;
+  state.pastes ||= {};
+  (state.pastes[documentId] ||= []).push(value.slice(0, 20000));
+  state.pastes[documentId] = state.pastes[documentId].slice(-200);
+  save();
+}
+function pasteHandler(documentId) { return `recordPaste('${documentId}', event.clipboardData && event.clipboardData.getData('text'))`; }
+function pendingPastes(documentId) { return state.pastes?.[documentId] || []; }
+function clearPastes(documentId) { if (state.pastes) delete state.pastes[documentId]; save(); }

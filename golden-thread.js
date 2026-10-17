@@ -42,6 +42,7 @@ const THREAD_LAYERS = { problem: [0, "top"], gap: [1, "top"], aim: [2, "top"], o
 const THREAD_STATUS_COLOURS = { aligned: "#69cb91", weak: "#e3c15a", broken: "#ef6f6c", unknown: "#6e7d8d", declared: "#79b8ff" };
 const THREAD_VERDICTS = { aligned: ["Aligned", "No errors or warnings. Ask your supervisor to confirm the argument reads as well as it links."], review: ["Review", "No breaks, but some links are weak or questionable. Work through the warnings below."], "needs-revision": ["Needs revision", "At least one link in the golden thread is broken. Fix the errors first; they are what an examiner would raise."] };
 
+const THREAD_DOCUMENT = "golden-thread";
 let threadRequest = null;
 
 function threadState() {
@@ -55,6 +56,7 @@ function threadField(name, value) { threadState().design[name] = value; save(); 
 function loadThreadExample() {
   const thread = threadState();
   thread.design = { ...THREAD_EXAMPLE };
+  Object.values(THREAD_EXAMPLE).forEach((value) => recordPaste(THREAD_DOCUMENT, value));
   thread.report = null; thread.error = ""; thread.focus = null;
   save(); render(); notify("Example loaded. It contains three planted flaws; run the check to find them.");
 }
@@ -79,7 +81,9 @@ async function checkThread() {
   render();
   try {
     const sourceIds = await syncSelectedSources(threadRequest.signal);
-    thread.report = await enginePost("/golden-thread/check", { ...threadPayload(thread.design), source_ids: sourceIds }, threadRequest.signal);
+    thread.report = await enginePost("/golden-thread/check", { ...threadPayload(thread.design), source_ids: sourceIds, document_id: THREAD_DOCUMENT, pasted_segments: pendingPastes(THREAD_DOCUMENT) }, threadRequest.signal);
+    clearPastes(THREAD_DOCUMENT);
+    markProvenanceStale();
   } catch (error) {
     if (error.name === "AbortError") return;
     thread.error = error instanceof TypeError ? engineUnreachableMessage() : error.message;
@@ -165,18 +169,18 @@ function renderGoldenThread() {
   const thread = threadState();
   const design = thread.design;
   const busy = Boolean(threadRequest);
-  const text = ([name, label, hint]) => `<label class="gt-field"><span>${label}</span><textarea rows="3" placeholder="${esc(hint)}" oninput="threadField('${name}', this.value)">${esc(design[name])}</textarea></label>`;
-  const list = ([name, label, hint]) => `<label class="gt-field"><span>${label}</span><textarea rows="${name === "questions" || name === "objectives" ? 4 : 3}" placeholder="${esc(hint)}" oninput="threadField('${name}', this.value)">${esc(design[name])}</textarea></label>`;
+  const text = ([name, label, hint]) => `<label class="gt-field"><span>${label}</span><textarea rows="3" placeholder="${esc(hint)}" oninput="threadField('${name}', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}">${esc(design[name])}</textarea></label>`;
+  const list = ([name, label, hint]) => `<label class="gt-field"><span>${label}</span><textarea rows="${name === "questions" || name === "objectives" ? 4 : 3}" placeholder="${esc(hint)}" oninput="threadField('${name}', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}">${esc(design[name])}</textarea></label>`;
   const listField = (name) => list(THREAD_LIST_FIELDS.find(([key]) => key === name));
   return `<div class="gt-page">
     <section class="gt-intro"><span class="m-kicker">Phase 1 · Methodology engine</span><h1>Golden thread check</h1><p>Test whether your problem, gap, aim, objectives, questions, theory, design and analysis hold together as one argument, the way an examiner reads them. Mwenza explains each problem and asks you a question about it. It never rewrites your text.</p><div class="gt-intro-actions"><button class="gt-btn ghost" onclick="loadThreadExample()">Load example with flaws</button><button class="gt-btn ghost" onclick="clearThread()">Clear</button></div></section>
     <div class="gt-layout">
       ${renderThreadResults(thread)}
       <form class="gt-form" onsubmit="event.preventDefault(); checkThread()">
-        <label class="gt-field"><span>Working title</span><input value="${esc(design.title)}" placeholder="Optional" oninput="threadField('title', this.value)" /></label>
+        <label class="gt-field"><span>Working title</span><input value="${esc(design.title)}" placeholder="Optional" oninput="threadField('title', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}" /></label>
         <fieldset><legend>1 · The argument</legend>${THREAD_TEXT_FIELDS.map(text).join("")}${listField("objectives")}${listField("questions")}${listField("hypotheses")}</fieldset>
-        <fieldset><legend>2 · Philosophy and theory</legend><div class="gt-row"><label class="gt-field"><span>Paradigm</span><input list="gt-paradigms" value="${esc(design.paradigm)}" placeholder="e.g. Pragmatism" oninput="threadField('paradigm', this.value)" /><datalist id="gt-paradigms">${THREAD_PARADIGMS.map((item) => `<option value="${item}"></option>`).join("")}</datalist></label><label class="gt-field"><span>Approach</span><select onchange="threadField('approach', this.value)">${["", "Quantitative", "Qualitative", "Mixed methods"].map((item) => `<option value="${item}" ${design.approach === item ? "selected" : ""}>${item || "Choose…"}</option>`).join("")}</select></label></div><label class="gt-field"><span>Theoretical underpinning</span><input value="${esc(design.theory)}" placeholder="e.g. Theory of Planned Behaviour" oninput="threadField('theory', this.value)" /></label>${listField("constructs")}</fieldset>
-        <fieldset><legend>3 · Design and analysis</legend><label class="gt-field"><span>Research strategy</span><input value="${esc(design.strategy)}" placeholder="e.g. Cross-sectional survey, case study, phenomenology" oninput="threadField('strategy', this.value)" /></label>${listField("data_collection")}${listField("analysis")}${listField("findings")}</fieldset>
+        <fieldset><legend>2 · Philosophy and theory</legend><div class="gt-row"><label class="gt-field"><span>Paradigm</span><input list="gt-paradigms" value="${esc(design.paradigm)}" placeholder="e.g. Pragmatism" oninput="threadField('paradigm', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}" /><datalist id="gt-paradigms">${THREAD_PARADIGMS.map((item) => `<option value="${item}"></option>`).join("")}</datalist></label><label class="gt-field"><span>Approach</span><select onchange="threadField('approach', this.value)">${["", "Quantitative", "Qualitative", "Mixed methods"].map((item) => `<option value="${item}" ${design.approach === item ? "selected" : ""}>${item || "Choose…"}</option>`).join("")}</select></label></div><label class="gt-field"><span>Theoretical underpinning</span><input value="${esc(design.theory)}" placeholder="e.g. Theory of Planned Behaviour" oninput="threadField('theory', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}" /></label>${listField("constructs")}</fieldset>
+        <fieldset><legend>3 · Design and analysis</legend><label class="gt-field"><span>Research strategy</span><input value="${esc(design.strategy)}" placeholder="e.g. Cross-sectional survey, case study, phenomenology" oninput="threadField('strategy', this.value)" onpaste="${pasteHandler(THREAD_DOCUMENT)}" /></label>${listField("data_collection")}${listField("analysis")}${listField("findings")}</fieldset>
         <div class="gt-submit">${renderEngineField()}<button class="gt-btn primary" type="submit" ${busy ? "disabled" : ""}>${busy ? "Checking…" : "Check golden thread"}</button></div>
       </form>
     </div>

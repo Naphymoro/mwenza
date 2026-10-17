@@ -48,3 +48,7 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## Claim–Citation Auditor
 
 `citations.py` audits a draft sentence by sentence. Each citation is resolved to a source in scope, then the claim (with citation markers removed) is compared with every single sentence and adjacent sentence pair of that source. The best window is returned as a `Passage` with absolute offsets into the source, so the verdict always points at inspectable evidence. The Sceptic agent holds the `citation-auditor` skill and its `audit_citations` tool. Shared text handling (sentence splitting with abbreviation masking, stemming, stopwords) lives in `text.py` and is used by both methodology engines.
+
+## Provenance Ledger
+
+`provenance.py` keeps an append-only log of `LedgerEvent`s. Each event's hash covers its fields and the previous event's hash, and snapshot text is bound by a SHA-256 `content_hash`, so `verify` detects edits to a saved ledger. Attribution follows each paragraph of the latest snapshot back through earlier snapshots by text similarity, then combines browser paste reports, the flags of checks tied to each snapshot, and verbatim six-word shingle matches against sources in scope. The Reproducer agent holds the `inspect_provenance` tool. The ledger has no user identity yet; binding events to authenticated accounts and signing the chain head are required before it can serve as institutional evidence.

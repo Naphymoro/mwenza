@@ -1,0 +1,25 @@
+.pv-tabs .gt-btn[aria-selected="true"] { cursor: default; }
+.pv-actions { display: flex; gap: 6px; }
+.pv-actions .gt-btn { padding: 6px 10px; font-size: 11px; }
+.pv-declaration { margin: 0; padding: 14px 16px; overflow-x: auto; border-radius: 10px; background: #111921; color: #c3ced8; font: 12.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pv-paragraph { padding: 12px 13px; border: 1px solid var(--m-border); border-radius: 10px; background: var(--m-panel-2); }
+.pv-paragraph-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 8px; }
+.pv-paragraph-head small { color: #718195; font-size: 11px; }
+.pv-text { margin: 0; color: #d5dee6; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pv-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid #263440; list-style: none; color: #aab7c5; font-size: 12px; line-height: 1.5; }
+.pv-list b { color: #d5dee6; }
+.pv-list q { display: block; margin-top: 4px; padding-left: 9px; border-left: 2px solid #3a4a5a; color: #8d9aaa; font-style: italic; }
+.pv-list q::before, .pv-list q::after { content: ""; }
+.pv-alert { color: #ffb3b0; }
+.pv-alert q { border-left-color: #ef6f6c; }
+.pv-yes { color: #8fdcac; font-weight: 800; }
+.pv-no { color: #f0d27a; font-weight: 800; }
+.pv-timeline { display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }
+.pv-timeline li { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 0 9px 12px; border-bottom: 1px solid #1f2b37; border-left: 2px solid #3a4a5a; font-size: 12px; }
+.pv-timeline li.mwenza { border-left-color: var(--m-accent); }
+.pv-timeline li.student { border-left-color: #79b8ff; }
+.pv-timeline time { grid-row: span 2; color: #718195; font-size: 11px; }
+.pv-timeline strong { color: #d5dee6; }
+.pv-timeline span { grid-column: 2; color: #aab7c5; }
+.pv-timeline code { grid-column: 3; grid-row: 1; color: #66778a; font-size: 10.5px; }
+@media (max-width: 760px) { .pv-timeline li { grid-template-columns: minmax(0, 1fr) auto; } .pv-timeline time { grid-row: auto; grid-column: 1 / -1; } .pv-timeline span { grid-column: 1 / -1; } .pv-timeline code { grid-column: 2; grid-row: 2; } }

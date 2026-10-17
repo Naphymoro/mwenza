@@ -4,7 +4,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Path as PathParam, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,8 @@ app = FastAPI(title="Mwenza Evidence Engine", version="0.1.0")
 # The browser workspace is served separately during development, so allow
 # local origins by default; deployments set MWENZA_CORS_ORIGIN_REGEX.
 app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("MWENZA_CORS_ORIGIN_REGEX", r"https?://(localhost|127\.0\.0\.1)(:\d+)?"), allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
-engine = NotebookEngine()
+engine = NotebookEngine(os.environ.get("MWENZA_LEDGER_PATH"))
+DOCUMENT_ID = r"^[\w.-]{1,120}$"
 model_gateway = ModelGateway()
 
 
@@ -41,19 +42,24 @@ class WorkflowRunRequest(BaseModel):
 Items = list[str]
 
 
+class ProvenanceFields(BaseModel):
+    document_id: str | None = Field(default=None, pattern=DOCUMENT_ID)
+    pasted_segments: list[str] = Field(default_factory=list, max_length=200)
+
+
 class TextSourceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     text: str = Field(min_length=1, max_length=2_000_000)
     source_id: str | None = Field(default=None, pattern=r"^[\w.-]{1,120}$")
 
 
-class CitationAuditRequest(BaseModel):
+class CitationAuditRequest(ProvenanceFields):
     text: str = Field(min_length=1, max_length=200_000)
     source_ids: set[str] | None = None
     references: dict[str, str] = Field(default_factory=dict, max_length=500)
 
 
-class GoldenThreadRequest(BaseModel):
+class GoldenThreadRequest(ProvenanceFields):
     title: str = Field(default="", max_length=300)
     problem: str = Field(default="", max_length=4000)
     gap: str = Field(default="", max_length=4000)
@@ -148,10 +154,21 @@ def run_workflow(request: WorkflowRunRequest) -> dict[str, object]:
 
 @app.post("/golden-thread/check")
 def check_golden_thread(request: GoldenThreadRequest) -> dict[str, object]:
-    design = ResearchDesign.from_dict(request.model_dump(exclude={"source_ids"}))
-    return engine.check_golden_thread(design, request.source_ids).to_dict()
+    design = ResearchDesign.from_dict(request.model_dump(exclude={"source_ids", "document_id", "pasted_segments"}))
+    report = engine.check_golden_thread(design, request.source_ids)
+    if request.document_id:
+        engine.record_golden_thread(request.document_id, design, report, request.pasted_segments)
+    return report.to_dict()
 
 
 @app.post("/citations/audit")
 def audit_citations(request: CitationAuditRequest) -> dict[str, object]:
-    return engine.audit_citations(request.text, request.source_ids, request.references).to_dict()
+    report = engine.audit_citations(request.text, request.source_ids, request.references)
+    if request.document_id:
+        engine.record_citation_audit(request.document_id, request.text, report, request.pasted_segments)
+    return report.to_dict()
+
+
+@app.get("/provenance/{document_id}")
+def provenance(document_id: str = PathParam(pattern=DOCUMENT_ID), source_ids: list[str] | None = Query(default=None)) -> dict[str, object]:
+    return engine.provenance_report(document_id, set(source_ids) if source_ids else None)

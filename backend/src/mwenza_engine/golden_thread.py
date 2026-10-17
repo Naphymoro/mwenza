@@ -412,3 +412,29 @@ class GoldenThreadChecker:
             return
         report.gap_citations = answer.citations
         self._issue(report, "gap-evidence", "info", ("gap",), f"Found {len(answer.citations)} candidate passage(s) related to the gap. Confirm they show an absence, conflict or limitation rather than just the topic.")
+
+
+FIELD_LABELS = (("title", "Working title"), ("problem", "Problem statement"), ("gap", "Research gap"), ("aim", "Aim"), ("objectives", "Objectives"), ("questions", "Research questions"), ("hypotheses", "Hypotheses"), ("paradigm", "Paradigm"), ("approach", "Approach"), ("strategy", "Research strategy"), ("theory", "Theoretical underpinning"), ("constructs", "Theory constructs"), ("data_collection", "Data collection"), ("analysis", "Analysis plan"), ("findings", "Findings"))
+NODE_FIELDS = {"problem": "Problem statement", "gap": "Research gap", "aim": "Aim", "paradigm": "Paradigm", "design": "Approach", "theory": "Theoretical underpinning", "obj": "Objectives", "rq": "Research questions", "h": "Hypotheses", "construct": "Theory constructs", "collection": "Data collection", "analysis": "Analysis plan", "finding": "Findings"}
+
+
+def design_text(design: ResearchDesign) -> str:
+    """Serialise a design as one labelled paragraph per field for the provenance ledger."""
+    parts = []
+    for name, label in FIELD_LABELS:
+        value = getattr(design, name)
+        if isinstance(value, tuple):
+            value = "\n".join(f"{index}. {item}" for index, item in enumerate(value, 1))
+        if value:
+            parts.append(f"{label}: {value}")
+    return "\n\n".join(parts)
+
+
+def design_flags(report: GoldenThreadReport) -> list[dict[str, str]]:
+    flags = []
+    for issue in report.issues:
+        if issue.severity == "info":
+            continue
+        for label in dict.fromkeys(NODE_FIELDS[node_id.split("-")[0]] for node_id in issue.node_ids if node_id.split("-")[0] in NODE_FIELDS):
+            flags.append({"anchor": label, "severity": issue.severity, "verdict": issue.check, "message": issue.message})
+    return flags

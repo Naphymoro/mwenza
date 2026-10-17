@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, and `POST /citations/audit`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, and `GET /provenance/{document_id}`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -55,3 +55,14 @@ Each issue carries `teach` (the methodological principle) and `ask` (a Socratic 
 - **Verdicts:** `supported`, `partial`, `contrasting` (the claim and passage point in opposite directions once negations and words such as higher/lower are multiplied through), `misquoted-number` (a percentage, decimal or count in the claim is absent from the best passage), `unrelated`, `unresolved`, and `unknown` (too little text). Uncited sentences that read as factual claims are flagged `needs-citation`.
 
 `POST /sources/text` ingests pasted text under a caller-supplied id, so the browser workspace can push its sources before an audit or a golden thread gap check. Re-sending an id replaces that source.
+
+## Provenance Ledger
+
+When `/golden-thread/check` or `/citations/audit` is called with a `document_id`, the engine appends two events to an append-only, hash-chained ledger: a `text-snapshot` of the submitted text (with any `pasted_segments` the browser reports) and an `ai-check` recording what Mwenza flagged. Set `MWENZA_LEDGER_PATH` to persist the ledger as JSONL; otherwise it lives in memory.
+
+`GET /provenance/{document_id}` (optionally with `source_ids`) returns:
+
+- **Integrity:** whether every event matches its hash and the chain is unbroken. The ledger is tamper-evident, not tamper-proof.
+- **Paragraph attribution** for the latest version: typed in Mwenza, pasted (origin not recorded), partly pasted, or present when tracking began; the feedback Mwenza raised on it, whether it was revised afterwards, and whether issues remain open in the latest check.
+- **Verbatim matches:** runs of 10 or more words identical to a source in scope, marked quoted or unquoted.
+- **Declaration:** a Markdown AI-use statement built only from recorded facts, with its limits stated.
