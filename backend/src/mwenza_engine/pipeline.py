@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from .graph import extract_graph
-from .ingest import ingest_path
+from .ingest import checksum_bytes, extract_text_file, ingest_path
 from .models import Answer, Citation, Entity, EvidenceSpan, Relation, SourceRecord
 from .retrieval import HybridRetriever
 from .agents import AgentOrchestrator
+from .citations import AuditReport, CitationAuditor
 from .golden_thread import GoldenThreadChecker, GoldenThreadReport, ResearchDesign
 
 
@@ -17,6 +18,7 @@ class NotebookEngine:
         self.relations: list[Relation] = []
         self.retriever = HybridRetriever()
         self.golden_thread = GoldenThreadChecker()
+        self.citation_auditor = CitationAuditor()
         self.agents = AgentOrchestrator(self.query, lambda: len(self.sources), lambda: len(self.evidence))
 
     @property
@@ -24,7 +26,15 @@ class NotebookEngine:
         return [span for source in self.sources.values() for span in source.pages]
 
     def ingest(self, path: str | Path, source_id: str | None = None) -> SourceRecord:
-        record = ingest_path(path, source_id)
+        return self._store(ingest_path(path, source_id))
+
+    def ingest_text(self, name: str, text: str, source_id: str | None = None) -> SourceRecord:
+        data = text.encode("utf-8")
+        record = extract_text_file(Path("source.txt"), source_id or f"src-{checksum_bytes(data)[:16]}", data)
+        record.name = name
+        return self._store(record)
+
+    def _store(self, record: SourceRecord) -> SourceRecord:
         self.sources[record.id] = record
         self.entities, self.relations = extract_graph(self.evidence)
         return record
@@ -47,3 +57,7 @@ class NotebookEngine:
         in_scope = [span for span in self.evidence if selected_source_ids is None or span.source_id in selected_source_ids]
         evidence = (lambda text: self.query(text, selected_source_ids)) if in_scope else None
         return self.golden_thread.check(design, evidence)
+
+    def audit_citations(self, text: str, selected_source_ids: set[str] | None = None, references: dict[str, str] | None = None) -> AuditReport:
+        in_scope = {source_id: record for source_id, record in self.sources.items() if selected_source_ids is None or source_id in selected_source_ids}
+        return self.citation_auditor.audit(text, in_scope, references)

@@ -44,3 +44,7 @@ permissions, provenance, and human approval.
 ## Golden Thread Engine
 
 The methodology layer treats a thesis as a typed research-design graph rather than prose. `golden_thread.py` builds nodes for each design element and links them with lexical carry-over scores and methodology rules. The Methodologist agent holds the `golden-thread` skill and its `check_alignment` tool. Gap claims reuse the evidence contract: the gap is retrieved against selected sources and returned as candidate citations, never as a verdict. Model-assisted checks (semantic similarity, construct synonymy) can later replace the lexical scorer behind the same report contract.
+
+## Claim–Citation Auditor
+
+`citations.py` audits a draft sentence by sentence. Each citation is resolved to a source in scope, then the claim (with citation markers removed) is compared with every single sentence and adjacent sentence pair of that source. The best window is returned as a `Passage` with absolute offsets into the source, so the verdict always points at inspectable evidence. The Sceptic agent holds the `citation-auditor` skill and its `audit_citations` tool. Shared text handling (sentence splitting with abbreviation masking, stemming, stopwords) lives in `text.py` and is used by both methodology engines.

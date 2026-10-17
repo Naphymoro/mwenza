@@ -30,6 +30,10 @@ python -m http.server 5173   # from the repository root, in a second terminal
 
 Open http://localhost:5173, choose **Golden thread**, and set the engine URL on the page if the engine runs on another port. The engine accepts browser requests from `localhost` origins only; set `MWENZA_CORS_ORIGIN_REGEX` for other deployments.
 
+## Citation audit
+
+The **Citation audit** page checks a pasted draft against the sources selected in the evidence library. Each cited sentence is marked supported, partly supported, possibly contrasting, number not in source, unrelated, or not linked, and selecting it shows the passage it was compared with. It uses the same engine as the golden thread page; selected browser sources are sent to the engine before each check.
+
 ## Product direction
 
 Mwenza should preserve the central NotebookLM-like contract: users select a bounded source set, answers cite that set, and missing evidence is surfaced instead of invented. Planned production layers are an ingestion worker, document extraction/chunking, vector or hybrid retrieval, model gateway, artifact jobs, object storage, and notebook sharing permissions. The backend now exposes `/agents`, `/agents/runs`, `/agents/run`, `/capabilities`, and `/graph`; these are deterministic today and form the adapter boundary for model providers, queues, and sandboxed research execution.

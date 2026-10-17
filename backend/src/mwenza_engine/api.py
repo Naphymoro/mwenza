@@ -41,6 +41,18 @@ class WorkflowRunRequest(BaseModel):
 Items = list[str]
 
 
+class TextSourceRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    text: str = Field(min_length=1, max_length=2_000_000)
+    source_id: str | None = Field(default=None, pattern=r"^[\w.-]{1,120}$")
+
+
+class CitationAuditRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=200_000)
+    source_ids: set[str] | None = None
+    references: dict[str, str] = Field(default_factory=dict, max_length=500)
+
+
 class GoldenThreadRequest(BaseModel):
     title: str = Field(default="", max_length=300)
     problem: str = Field(default="", max_length=4000)
@@ -83,6 +95,12 @@ async def upload_source(file: UploadFile = File(...)) -> dict[str, object]:
     finally:
         temp_path.unlink(missing_ok=True)
     return {"id": record.id, "name": record.name, "status": record.status, "metadata": record.metadata, "pages": len(record.pages)}
+
+
+@app.post("/sources/text")
+def add_text_source(request: TextSourceRequest) -> dict[str, object]:
+    record = engine.ingest_text(request.name, request.text, request.source_id)
+    return {"id": record.id, "name": record.name, "status": record.status, "pages": len(record.pages)}
 
 
 @app.post("/query")
@@ -132,3 +150,8 @@ def run_workflow(request: WorkflowRunRequest) -> dict[str, object]:
 def check_golden_thread(request: GoldenThreadRequest) -> dict[str, object]:
     design = ResearchDesign.from_dict(request.model_dump(exclude={"source_ids"}))
     return engine.check_golden_thread(design, request.source_ids).to_dict()
+
+
+@app.post("/citations/audit")
+def audit_citations(request: CitationAuditRequest) -> dict[str, object]:
+    return engine.audit_citations(request.text, request.source_ids, request.references).to_dict()

@@ -3,7 +3,7 @@
 .gt-intro h1 { margin: 10px 0 8px; color: #f4f7fa; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.05; letter-spacing: -.045em; }
 .gt-intro p { max-width: 680px; margin: 0; color: var(--m-muted); font-size: 14px; line-height: 1.6; }
 .gt-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.gt-layout { display: grid; gap: 20px; max-width: 1100px; }
+.gt-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; max-width: 1100px; }
 .gt-form { display: grid; gap: 14px; max-width: 760px; padding: 16px; border: 1px solid var(--m-border); border-radius: 12px; background: var(--m-panel); }
 .gt-form fieldset { display: grid; gap: 11px; margin: 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--m-border); }
 .gt-form legend { padding: 0 0 4px; color: var(--m-accent); font-size: 11px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
@@ -57,7 +57,7 @@
 .gt-ring.warning { border-color: #e3c15a; }
 .gt-link { padding: 0; border: 0; background: none; color: var(--m-accent); font-size: 11px; font-weight: 800; }
 .gt-focus-text { margin: -2px 0 12px; padding: 9px 11px; border-radius: 8px; background: #111921; color: #c3ced8; font-size: 12px; line-height: 1.55; }
-.gt-issues { display: grid; gap: 10px; }
+.gt-issues { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .gt-issue { padding: 12px 13px; border: 1px solid var(--m-border); border-radius: 10px; background: var(--m-panel-2); }
 .gt-issue.error { border-color: rgba(239,111,108,.45); }
 .gt-issue.warning { border-color: rgba(227,193,90,.35); }

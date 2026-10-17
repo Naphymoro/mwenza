@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, and `POST /golden-thread/check`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, and `POST /citations/audit`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -45,3 +45,13 @@ Checks are deterministic, so no model key is needed:
 - **Gap evidence:** with `source_ids`, the gap is retrieved against the selected sources and candidate passages are returned for human review.
 
 Each issue carries `teach` (the methodological principle) and `ask` (a Socratic question). The engine never rewrites the student's text. Links with too little text are reported as `unknown` rather than guessed. `status` (`aligned`, `review`, `needs-revision`) is the verdict; `alignment_score` is only the share of judged links that are aligned.
+
+## Claim–Citation Auditor
+
+`POST /citations/audit` takes a draft (`text`), the sources in scope (`source_ids`) and optional `references` that link citation keys to sources (for example `{"ref-3": "src-…"}` or `{"ouma-2021": "src-…"}`). It returns every sentence with its offsets and, for each citation, a verdict and the passage it was compared against.
+
+- **Citations recognised:** parenthetical author–year `(Ouma & Kiprop, 2021; Smith et al., 2019)`, narrative `Ouma (2021)`, and numbered `[3]`, `[2–4]`.
+- **Resolution:** author–year citations are matched automatically when exactly one source in scope contains the surname and year in its name or opening text. Ambiguous or numbered citations stay `unresolved` until linked through `references`; the engine never guesses.
+- **Verdicts:** `supported`, `partial`, `contrasting` (the claim and passage point in opposite directions once negations and words such as higher/lower are multiplied through), `misquoted-number` (a percentage, decimal or count in the claim is absent from the best passage), `unrelated`, `unresolved`, and `unknown` (too little text). Uncited sentences that read as factual claims are flagged `needs-citation`.
+
+`POST /sources/text` ingests pasted text under a caller-supplied id, so the browser workspace can push its sources before an audit or a golden thread gap check. Re-sending an id replaces that source.

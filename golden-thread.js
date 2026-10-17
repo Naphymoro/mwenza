@@ -46,13 +46,11 @@ let threadRequest = null;
 
 function threadState() {
   state.thread ||= { design: emptyThreadDesign(), report: null, error: "", focus: null };
-  state.engineUrl ||= "http://localhost:8000";
   return state.thread;
 }
 
 function emptyThreadDesign() { return Object.fromEntries(Object.keys(THREAD_EXAMPLE).map((key) => [key, ""])); }
 function threadField(name, value) { threadState().design[name] = value; save(); }
-function threadEngineUrl(value) { state.engineUrl = value.trim().replace(/\/+$/, ""); save(); }
 
 function loadThreadExample() {
   const thread = threadState();
@@ -80,12 +78,11 @@ async function checkThread() {
   thread.error = ""; thread.focus = null;
   render();
   try {
-    const response = await fetch(`${state.engineUrl}/golden-thread/check`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(threadPayload(thread.design)), signal: threadRequest.signal });
-    if (!response.ok) throw new Error(`The engine rejected the design (HTTP ${response.status}).`);
-    thread.report = await response.json();
+    const sourceIds = await syncSelectedSources(threadRequest.signal);
+    thread.report = await enginePost("/golden-thread/check", { ...threadPayload(thread.design), source_ids: sourceIds }, threadRequest.signal);
   } catch (error) {
     if (error.name === "AbortError") return;
-    thread.error = error instanceof TypeError ? `Couldn't reach the Mwenza engine at ${state.engineUrl}. Start it with "uvicorn mwenza_engine.api:app --app-dir backend/src" and open this page from http://localhost (for example "python -m http.server").` : error.message;
+    thread.error = error instanceof TypeError ? engineUnreachableMessage() : error.message;
   } finally {
     threadRequest = null;
   }
@@ -158,8 +155,9 @@ function renderThreadResults(thread) {
     <div class="gt-verdict ${report.status}"><div><span class="gt-kicker">Verdict</span><strong>${verdict}</strong><p>${explanation}</p></div><dl><div><dt>${report.counts.error}</dt><dd>errors</dd></div><div><dt>${report.counts.warning}</dt><dd>warnings</dd></div><div><dt>${aligned}/${judged.length}</dt><dd>links aligned</dd></div></dl></div>
     <div class="gt-panel"><div class="gt-panel-head"><strong>Golden thread map</strong><span>Approach: ${esc(report.approach.value)} (${esc(report.approach.source.replace(/-/g, " "))}). Select an element to trace its links.</span></div>${renderThreadMap(report, thread.focus)}<div class="gt-legend">${Object.entries(THREAD_STATUS_COLOURS).map(([status, colour]) => `<span><i style="background:${colour}"></i>${status}</span>`).join("")}<span><i class="gt-ring error"></i>has error</span><span><i class="gt-ring warning"></i>has warning</span></div></div>
     <div class="gt-panel"><div class="gt-panel-head"><strong>${thread.focus ? `Issues for ${esc(threadShortLabel(focusNode || { id: thread.focus }))}` : "Issues"}</strong>${thread.focus ? `<button class="gt-link" onclick="focusThreadNode('${thread.focus}')">Show all issues</button>` : `<span>${report.issues.length} found, most serious first</span>`}</div>${focusNode ? `<p class="gt-focus-text">${esc(focusNode.text)}</p>` : ""}<div class="gt-issues">${issues.map(renderThreadIssue).join("") || `<div class="gt-empty small">No issues on this element.</div>`}</div></div>
+    ${report.gap_citations.length ? `<div class="gt-panel"><div class="gt-panel-head"><strong>Gap evidence candidates</strong><span>Passages related to your gap. Check they show an absence, conflict or limitation, not just the topic.</span></div>${report.gap_citations.map((item) => `<blockquote class="ca-quote"><span>${esc(item.source_name)}${item.page ? `, p. ${item.page}` : ""}</span>${esc(item.quote)}</blockquote>`).join("")}</div>` : ""}
     <details class="gt-panel gt-details"><summary>Link details (${report.edges.length})</summary><table><thead><tr><th>Link</th><th>Relation</th><th>Status</th><th>Why</th></tr></thead><tbody>${report.edges.map((edge) => `<tr><td>${esc(edge.source)} → ${esc(edge.target)}</td><td>${esc(edge.relation)}</td><td><span class="gt-status" style="color:${THREAD_STATUS_COLOURS[edge.status]}">${esc(edge.status)}${edge.score !== null && !["aligned", "broken"].includes(edge.status) ? ` ${edge.score}` : ""}</span></td><td>${esc(edge.reason)}</td></tr>`).join("")}</tbody></table></details>
-    <p class="gt-method">${esc(report.method.charAt(0).toUpperCase() + report.method.slice(1))}. Gap evidence currently uses sources uploaded to the engine, not the browser-only sources in this notebook.</p>
+    <p class="gt-method">${esc(report.method.charAt(0).toUpperCase() + report.method.slice(1))}. The gap is checked against the ${selectedSources().length} notebook source${selectedSources().length === 1 ? "" : "s"} selected in the evidence library.</p>
   </section>`;
 }
 
@@ -179,7 +177,7 @@ function renderGoldenThread() {
         <fieldset><legend>1 · The argument</legend>${THREAD_TEXT_FIELDS.map(text).join("")}${listField("objectives")}${listField("questions")}${listField("hypotheses")}</fieldset>
         <fieldset><legend>2 · Philosophy and theory</legend><div class="gt-row"><label class="gt-field"><span>Paradigm</span><input list="gt-paradigms" value="${esc(design.paradigm)}" placeholder="e.g. Pragmatism" oninput="threadField('paradigm', this.value)" /><datalist id="gt-paradigms">${THREAD_PARADIGMS.map((item) => `<option value="${item}"></option>`).join("")}</datalist></label><label class="gt-field"><span>Approach</span><select onchange="threadField('approach', this.value)">${["", "Quantitative", "Qualitative", "Mixed methods"].map((item) => `<option value="${item}" ${design.approach === item ? "selected" : ""}>${item || "Choose…"}</option>`).join("")}</select></label></div><label class="gt-field"><span>Theoretical underpinning</span><input value="${esc(design.theory)}" placeholder="e.g. Theory of Planned Behaviour" oninput="threadField('theory', this.value)" /></label>${listField("constructs")}</fieldset>
         <fieldset><legend>3 · Design and analysis</legend><label class="gt-field"><span>Research strategy</span><input value="${esc(design.strategy)}" placeholder="e.g. Cross-sectional survey, case study, phenomenology" oninput="threadField('strategy', this.value)" /></label>${listField("data_collection")}${listField("analysis")}${listField("findings")}</fieldset>
-        <div class="gt-submit"><label class="gt-engine"><span>Engine</span><input value="${esc(state.engineUrl)}" aria-label="Engine URL" onchange="threadEngineUrl(this.value)" /></label><button class="gt-btn primary" type="submit" ${busy ? "disabled" : ""}>${busy ? "Checking…" : "Check golden thread"}</button></div>
+        <div class="gt-submit">${renderEngineField()}<button class="gt-btn primary" type="submit" ${busy ? "disabled" : ""}>${busy ? "Checking…" : "Check golden thread"}</button></div>
       </form>
     </div>
   </div>`;

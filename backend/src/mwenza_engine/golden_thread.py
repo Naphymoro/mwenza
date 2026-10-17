@@ -1,23 +1,15 @@
 from __future__ import annotations
 
-import re
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Callable, Iterable
 
 from .models import Answer, Citation
-from .retrieval import tokenize
+from .text import content_terms as _terms, has_cue as _has_cue
 
 ALIGNED = 0.25
 WEAK = 0.10
 MIN_TERMS = 3
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
-
-STOPWORDS = frozenset(
-    "the and for with from that this these those into onto among between within about which what when where whose will would shall should "
-    "could their there they them than then also such each other over under more most less least very can may might must been being have has "
-    "had are was were not nor but its our your how why who does did doing done study research aim aims objective objectives question questions "
-    "hypothesis hypotheses using use used based towards toward upon extent determine assess examine investigate explore establish evaluate".split()
-)
 
 EXPLORATORY_CUES = ("how do", "how does", "how did", "why", "experience", "experiences", "lived", "perception", "perceptions", "perceive", "meaning", "meanings", "understand", "understanding", "views", "describe", "explore")
 CONFIRMATORY_CUES = ("effect", "effects", "impact", "influence", "influences", "relationship", "association", "associated", "predict", "predicts", "predictor", "predictors", "correlation", "correlated", "difference", "differences", "compare", "to what extent", "affect", "affects", "determinants")
@@ -149,17 +141,6 @@ class GoldenThreadReport:
         }
 
 
-def _stem(token: str) -> str:
-    for suffix in ("ations", "ation", "ings", "ing", "ness", "ment", "ies", "ed", "es", "s"):
-        if token.endswith(suffix) and len(token) - len(suffix) >= 4:
-            return token[: -len(suffix)]
-    return token
-
-
-def _terms(text: str) -> set[str]:
-    return {_stem(token) for token in tokenize(text) if token not in STOPWORDS and not token.isdigit()}
-
-
 def _overlap(left: str, right: str) -> tuple[float | None, list[str]]:
     a, b = _terms(left), _terms(right)
     if min(len(a), len(b)) < MIN_TERMS:
@@ -172,11 +153,6 @@ def _status(score: float | None) -> str:
     if score is None:
         return "unknown"
     return "aligned" if score >= ALIGNED else "weak" if score >= WEAK else "broken"
-
-
-def _has_cue(text: str, cues: Iterable[str]) -> bool:
-    lowered = text.lower()
-    return any(re.search(rf"(?<![\w-]){re.escape(cue)}(?![\w-])", lowered) for cue in cues)
 
 
 def classify_question(text: str) -> str:
