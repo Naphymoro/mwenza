@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "note": "Synthetic test data. The research questions are invented for testing the Methodology Decision Navigator; they describe no real student, study or finding. Each scenario lists the answers a methodologist would give and the design they should lead to.",
+  "scenarios": [
+    {"discipline": "Education", "question": "Does a peer-tutoring programme, randomly assigned to schools, improve Grade 6 numeracy scores?", "answers": ["test", "random"], "design": "rct"},
+    {"discipline": "Agricultural economics", "question": "What was the effect of a fertiliser subsidy introduced in some districts first on maize yields?", "answers": ["test", "nonrandom"], "design": "quasi"},
+    {"discipline": "Occupational health", "question": "How does night-shift work relate to the development of hypertension over ten years among factory workers?", "answers": ["test", "observe", "yes"], "design": "cohort"},
+    {"discipline": "Obstetrics", "question": "Which prior exposures are associated with maternal death in district hospitals?", "answers": ["test", "observe", "no", "rare"], "design": "case-control"},
+    {"discipline": "Education policy", "question": "What is the relationship between household income and secondary-school enrolment in a peri-urban county?", "answers": ["test", "observe", "no", "common"], "design": "survey"},
+    {"discipline": "Demography", "question": "Is women's schooling associated with modern contraceptive use, using an existing national household dataset?", "answers": ["test", "existing"], "design": "secondary"},
+    {"discipline": "Nursing", "question": "How do newly qualified nurses experience their first night shift on a busy ward?", "answers": ["explore", "lived"], "design": "phenomenology"},
+    {"discipline": "Anthropology", "question": "How do lakeside fishing communities organise informal credit among themselves?", "answers": ["explore", "culture"], "design": "ethnography"},
+    {"discipline": "Management", "question": "How do small agribusinesses come to adopt mobile money for supplier payments?", "answers": ["explore", "process"], "design": "grounded-theory"},
+    {"discipline": "History of education", "question": "How do retired teachers narrate their careers across a period of curriculum reform?", "answers": ["explore", "stories"], "design": "narrative"},
+    {"discipline": "Public policy", "question": "How did two county governments implement a free maternity policy?", "answers": ["explore", "case"], "design": "case-study"},
+    {"discipline": "Community development", "question": "How can a village and its elders, guided by Ubuntu, co-design a response to youth unemployment?", "answers": ["change", "community"], "design": "par"},
+    {"discipline": "Computer science", "question": "Can a Kiswahili SMS assistant improve smallholder farmers' access to weather advice?", "answers": ["change", "artefact"], "design": "design-science"},
+    {"discipline": "Higher education", "question": "How common is mobile learning among university students, and why do some students not use it?", "answers": ["both", "measure-first"], "design": "explanatory"},
+    {"discipline": "Nutrition", "question": "What does food insecurity mean to urban households, and how prevalent is it when measured that way?", "answers": ["both", "explore-first"], "design": "exploratory"},
+    {"discipline": "Water and sanitation", "question": "Do survey measures and household accounts agree on how often water points fail?", "answers": ["both", "together"], "design": "convergent"}
+  ]
+}

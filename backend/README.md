@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `POST /paradigm/check`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, `POST /discovery/snippets`, `POST /discovery/citations`, and `POST /discovery/published-version`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `POST /paradigm/check`, `GET /navigator`, `POST /navigator/recommend`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, `POST /discovery/snippets`, `POST /discovery/citations`, and `POST /discovery/published-version`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -81,6 +81,10 @@ MWENZA_ASTA=on ASTA_API_KEY=your-key uvicorn mwenza_engine.api:app --app-dir src
 
 OpenScholar is not connected. It has no hosted API: its [repository](https://github.com/AkariAsai/OpenScholar) provides a command-line pipeline whose local index needs very large memory, and its retriever endpoint is announced as planned. The connector boundary is ready for it once that endpoint exists.
 
+## Methodology Decision Navigator
+
+`GET /navigator` returns the decision tree (steps, options and the reasoning for each question) and the sixteen designs. `POST /navigator/recommend` takes `answers`, the option ids chosen from the start step, and returns the path taken with the reasoning at each step, then either the next question (`complete: false`) or the design (`complete: true`) with `method_fields` ready for `POST /paradigm/check`. An unknown option or answers past a finished design return HTTP 422. Designs cover experiments, quasi-experiments, cohort, case-control, survey and secondary analysis; phenomenology, ethnography, grounded theory, narrative inquiry, case study and participatory action research; explanatory, exploratory and convergent mixed methods; and design science. The tests run every design through the paradigm–method checker under each paradigm it lists, so the navigator cannot suggest a design the checker would flag.
+
 ## Paradigm–Method Checker
 
 `POST /paradigm/check` checks each layer of a methodology against the stated paradigm, following the layers of the widely taught "research onion": paradigm, approach to theory (deductive, inductive, abductive), methodological choice, strategy, time horizon, sampling and sample-size justification, data collection, analysis, and quality criteria. It also checks that hypotheses state a relationship and that their constructs are measured, that questions about change are not answered with cross-sectional data, and that qualitative or purposively sampled designs do not claim statistical generalisation.
@@ -132,6 +136,7 @@ python -m pip install -e '.[mcp]'
 | `check_published_version` | Published version of a bioRxiv/medRxiv preprint | yes |
 | `check_golden_thread` | The golden thread check on a research design | no |
 | `check_paradigm_fit` | The paradigm–method check | no |
+| `navigate_methodology` | The method navigator: next question, or the design at the end of the path | no |
 | `audit_citations` | The citation audit, with the cited sources passed inline | no |
 
 All tools are read-only. Results are compact records carrying licence, preprint, retraction and published-version fields, and the server's instructions tell agents how to use them (cite preprints as not peer reviewed, never use retracted work as evidence, store abstracts only when `abstract_storable` is true). The resource `mwenza://data-sources` lists each source's licence and rate limit.

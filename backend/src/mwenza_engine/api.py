@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .discovery import DiscoveryError, LiteratureDiscovery, serialise
 from .open_discovery import SOURCE_REGISTRY, OpenDiscovery, serialise as serialise_open
 from .golden_thread import ResearchDesign
+from .navigator import NavigatorError, catalogue as navigator_catalogue, recommend as navigator_recommend
 from .paradigm import MethodDesign
 from .pipeline import NotebookEngine
 from .model_gateway import ModelGateway
@@ -57,6 +58,10 @@ class DiscoveryRequest(BaseModel):
     provider: Literal["open", "asta"] = "open"
     scope: Literal["all", "peer-reviewed", "preprints"] = "all"
     document_id: str | None = Field(default=None, pattern=DOCUMENT_ID)
+
+
+class NavigatorRequest(BaseModel):
+    answers: list[str] = Field(default_factory=list, max_length=10)
 
 
 class PublishedVersionRequest(BaseModel):
@@ -275,3 +280,16 @@ def check_paradigm(request: ParadigmRequest) -> dict[str, object]:
     if request.document_id:
         engine.record_paradigm(request.document_id, design, report, request.pasted_segments)
     return report.to_dict()
+
+
+@app.get("/navigator")
+def navigator() -> dict[str, object]:
+    return navigator_catalogue()
+
+
+@app.post("/navigator/recommend")
+def navigator_recommendation(request: NavigatorRequest) -> dict[str, object]:
+    try:
+        return navigator_recommend(request.answers)
+    except NavigatorError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

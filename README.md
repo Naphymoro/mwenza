@@ -30,6 +30,10 @@ python -m http.server 5173   # from the repository root, in a second terminal
 
 Open http://localhost:5173, choose **Golden thread**, and set the engine URL on the page if the engine runs on another port. The engine accepts browser requests from `localhost` origins only; set `MWENZA_CORS_ORIGIN_REGEX` for other deployments.
 
+## Method navigator
+
+The **Method navigator** page asks up to four questions about the research question (test or explore, control over assignment, change over time, rare outcomes, which strand comes first) and suggests a coherent design: strategy, approach to theory, time horizon, sampling, sample size, data collection, analysis and quality criteria, with the reasoning for each step, what to watch out for and the paradigms the design fits. Any answer can be changed. The student picks a paradigm and sends the design to the paradigm and method page to adapt and check it; the copied text is recorded as pasted, so the provenance ledger does not attribute it to the student.
+
 ## Paradigm and method
 
 The **Paradigm & method** page checks that every layer of a methodology follows from its paradigm, from approach to theory through strategy, time horizon and sampling to analysis and quality criteria. Each conflict shows coherent options both ways, and the page summarises what the chosen paradigm commits the researcher to. Designs can be imported from the golden thread page, and each check is recorded in the provenance ledger.

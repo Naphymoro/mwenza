@@ -1,0 +1,18 @@
+.nv-path { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.nv-path li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 11px; border: 1px solid var(--m-border); border-radius: 9px; background: var(--m-panel-2); }
+.nv-q { color: #8d9aaa; font-size: 12px; }
+.nv-a { color: #e7edf3; font-size: 12.5px; font-weight: 750; }
+.nv-why { margin: 0 0 12px; color: var(--m-muted); font-size: 12.5px; line-height: 1.55; }
+.nv-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.nv-option { display: grid; gap: 4px; padding: 12px 13px; border: 1px solid var(--m-border); border-radius: 10px; background: var(--m-panel-2); color: var(--m-text); text-align: left; }
+.nv-option:hover { border-color: var(--m-accent); }
+.nv-option:disabled { opacity: .6; cursor: progress; }
+.nv-option strong { font-size: 13px; line-height: 1.35; }
+.nv-option span { color: #8d9aaa; font-size: 11.5px; line-height: 1.45; }
+.nv-layers ul, .nv-cautions { margin: 0; padding-left: 18px; }
+.nv-cautions { color: #f0d27a; font-size: 12.5px; line-height: 1.6; }
+.nv-paradigms { display: flex; flex-wrap: wrap; gap: 6px; }
+.nv-chip { padding: 6px 11px; border: 1px solid var(--m-border); border-radius: 999px; background: #1b2631; color: #c9d6e2; font-size: 12px; font-weight: 750; }
+.nv-chip:hover { border-color: #a66e48; }
+.nv-chip.active { border-color: var(--m-accent); background: rgba(232,161,93,.14); color: #f4f7fa; }
+@media (max-width: 760px) { .nv-path li { grid-template-columns: minmax(0, 1fr) auto; } .nv-q { grid-column: 1 / -1; } }

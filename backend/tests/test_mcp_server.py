@@ -35,7 +35,7 @@ def test_tools_are_listed_with_read_only_annotations():
         return (await client.list_tools()).tools
 
     tools = {tool.name: tool for tool in run(scenario)}
-    assert set(tools) == {"search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "audit_citations"}
+    assert set(tools) == {"search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "navigate_methodology", "audit_citations"}
     assert all(tool.annotations.read_only_hint for tool in tools.values())
     assert tools["search_literature"].annotations.open_world_hint and not tools["audit_citations"].annotations.open_world_hint
     assert set(tools["search_literature"].input_schema["properties"]) == {"query", "scope", "limit", "year_from", "year_to"}
@@ -104,6 +104,19 @@ def test_methodology_tools_match_the_engine():
     assert method["status"] == "needs-revision" and any(issue["check"] == "paradigm-approach" for issue in method["issues"])
     verdicts = [sentence["citations"][0]["verdict"] if sentence["citations"] else (sentence["flags"][0] if sentence["flags"] else None) for sentence in audit["sentences"]]
     assert verdicts == EXPECTED
+
+
+def test_navigator_tool_walks_the_tree():
+    async def scenario(client):
+        first = payload(await client.call_tool("navigate_methodology", {}))
+        design = payload(await client.call_tool("navigate_methodology", {"answers": ["explore", "lived"]}))
+        bad = await client.call_tool("navigate_methodology", {"answers": ["nonsense"]})
+        return first, design, bad
+
+    first, design, bad = run(scenario)
+    assert not first["complete"] and first["next"]["id"] == "start"
+    assert design["complete"] and design["design"]["key"] == "phenomenology"
+    assert bad.is_error and "not an option" in bad.content[0].text
 
 
 def test_data_sources_resource_lists_licences():

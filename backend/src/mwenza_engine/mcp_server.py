@@ -26,6 +26,7 @@ from .discovery import DiscoveryError
 from .golden_thread import GoldenThreadChecker, ResearchDesign
 from .ingest import extract_text_file
 from .open_discovery import ATTRIBUTION, SOURCE_REGISTRY, OpenDiscovery, OpenWork
+from .navigator import NavigatorError, recommend as navigator_recommend
 from .paradigm import MethodDesign, ParadigmMethodChecker
 
 INSTRUCTIONS = """Mwenza searches openly licensed scholarly metadata (OpenAlex, Crossref, DOAJ, OpenCitations) and preprint servers (arXiv, Europe PMC, Crossref posted content including ChemRxiv and SSRN, AfricArXiv), and checks research designs and citations.
@@ -158,6 +159,16 @@ def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
     def check_paradigm_fit(design: MethodInput) -> dict[str, Any]:
         """Check that approach to theory, strategy, time horizon, sampling, data collection, analysis and quality criteria follow from the paradigm; conflicts include coherent alternatives."""
         return ParadigmMethodChecker().check(MethodDesign.from_dict(design.model_dump())).to_dict()
+
+    @server.tool(title="Navigate methodology", annotations=local)
+    def navigate_methodology(
+        answers: Annotated[list[str], Field(max_length=10, description="Option ids chosen so far, from the start step; [] returns the first question")] = [],
+    ) -> dict[str, Any]:
+        """Walk the methodology decision tree: returns the next question with its options, or at the end a coherent design (strategy, sampling, data collection, analysis, quality criteria, fitting paradigms) with the reasoning for each step."""
+        try:
+            return navigator_recommend(answers)
+        except NavigatorError as exc:
+            raise ToolError(str(exc)) from exc
 
     @server.tool(title="Audit citations", annotations=local)
     def audit_citations(
