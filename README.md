@@ -44,7 +44,9 @@ The **Provenance** page shows a tamper-evident record for the citation audit dra
 
 ## Find literature
 
-The **Find literature** page searches published papers or passages through Ai2's Asta Scientific Corpus Tool and adds the abstracts or passages you choose to the notebook, ready for the citation audit and golden thread gap check. It is off until the engine is started with `MWENZA_ASTA=on` and an `ASTA_API_KEY`; the Asta licence allows academic, non-commercial research use only and requires publications to acknowledge Ai2.
+The **Find literature** page searches open scholarly records from OpenAlex, Crossref and the Directory of Open Access Journals, follows citations through OpenCitations, and adds the works you choose to the notebook, ready for the citation audit and golden thread gap check. Each result shows which source supplied it and its licence; Mwenza stores an abstract only when that licence allows, and otherwise keeps the reference and a link. It works without an account; a free `MWENZA_OPENALEX_KEY` raises the daily search budget, and `MWENZA_CONTACT_EMAIL` identifies the engine to Crossref and OpenAlex.
+
+Where an engine also enables Ai2's Asta (`MWENZA_ASTA=on` with an `ASTA_API_KEY`), the page offers it as a second provider with passage search. The Asta licence allows academic, non-commercial research use only and requires publications to acknowledge Ai2.
 
 ## Product direction
 

@@ -87,11 +87,13 @@ def test_api_is_off_by_default_and_reports_licence(monkeypatch):
 
     client = TestClient(api.app)
     status = client.get("/discovery/status").json()
-    assert status["enabled"] is False and "non-commercial" in status["licence"]["summary"]
-    assert client.post("/discovery/papers", json={"query": "skilled birth attendance"}).status_code == 503
+    assert status["default_provider"] == "open"
+    asta = status["providers"]["asta"]
+    assert asta["enabled"] is False and "non-commercial" in asta["licence"]["summary"]
+    assert client.post("/discovery/papers", json={"query": "skilled birth attendance", "provider": "asta"}).status_code == 503
     fake = FakeAsta({"search_papers_by_relevance": {"content": [{"type": "text", "text": json.dumps(PAPERS)}], "isError": False}})
     monkeypatch.setattr(api, "discovery", discovery(fake))
-    body = client.post("/discovery/papers", json={"query": "skilled birth attendance", "limit": 5}).json()
+    body = client.post("/discovery/papers", json={"query": "skilled birth attendance", "limit": 5, "provider": "asta"}).json()
     assert body["results"][0]["paper_id"] == "abc123" and "Ai2" in body["attribution"]
     assert client.post("/discovery/papers", json={"query": "x"}).status_code == 422
     scout = next(agent for agent in client.get("/agents").json()["agents"] if agent["id"] == "scout")

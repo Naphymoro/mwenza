@@ -138,6 +138,7 @@ class ProvenanceLedger:
         events = self.for_document(document_id)
         snapshots = [event for event in events if event.kind == "text-snapshot"]
         checks = [event for event in events if event.kind == "ai-check"]
+        searches = [event for event in events if event.kind == "discovery-search"]
         attribution = self._attribute(snapshots, checks, sources) if snapshots else []
         integrity = self.verify()
         return {
@@ -145,7 +146,7 @@ class ProvenanceLedger:
             "integrity": integrity,
             "events": [{key: value for key, value in asdict(event).items() if key != "text"} for event in reversed(events)],
             "paragraphs": attribution,
-            "declaration": self._declaration(document_id, snapshots, checks, attribution, integrity),
+            "declaration": self._declaration(document_id, snapshots, checks, attribution, integrity, searches),
             "origin_labels": ORIGIN_LABELS,
             "method": "paragraph lineage by text similarity across recorded snapshots; paste reports come from the browser; verbatim matches use runs of 10 or more identical words against sources in scope",
         }
@@ -228,7 +229,13 @@ class ProvenanceLedger:
         return matches
 
     @staticmethod
-    def _declaration(document_id: str, snapshots: list[LedgerEvent], checks: list[LedgerEvent], attribution: list[dict[str, Any]], integrity: Mapping[str, Any]) -> str:
+    def _declaration(document_id: str, snapshots: list[LedgerEvent], checks: list[LedgerEvent], attribution: list[dict[str, Any]], integrity: Mapping[str, Any], searches: list[LedgerEvent] | None = None) -> str:
+        searches = searches or []
+        providers = {"open": "open scholarly metadata (OpenAlex, Crossref, DOAJ)", "asta": "Ai2's Asta Scientific Corpus Tool"}
+        search_lines = [f"- {_count(sum(1 for event in searches if event.details.get('provider') == provider), 'literature search')} through {label}" for provider, label in providers.items() if any(event.details.get("provider") == provider for event in searches)]
+        if not snapshots and searches:
+            queries = [f"- {event.timestamp[:10]}: \"{event.details.get('query', '')}\" ({event.details.get('results', 0)} results)" for event in searches]
+            return "\n".join([f"# Literature search record: {document_id}", "", "## How Mwenza was used", "", *search_lines, "- Mwenza returned search results; the student chose which works to add.", "", "## Searches", "", *queries]) + "\n"
         if not snapshots:
             return f"No activity has been recorded for '{document_id}'."
         tools: dict[str, int] = {}
@@ -248,6 +255,7 @@ class ProvenanceLedger:
             "## How Mwenza was used",
             "",
             *[f"- {count} {tool_names.get(tool, tool)}" if count != 1 else f"- 1 {tool_names.get(tool, tool).replace('checks', 'check')}" for tool, count in sorted(tools.items())],
+            *search_lines,
             "- Mwenza gives feedback and questions. It does not generate or rewrite the student's text.",
             "",
             "## The current text",

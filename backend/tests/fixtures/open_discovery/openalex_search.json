@@ -1,0 +1,620 @@
+{
+ "meta": {
+  "count": 4
+ },
+ "results": [
+  {
+   "id": "https://openalex.org/W2613808422",
+   "doi": "https://doi.org/10.1155/2017/9740196",
+   "display_name": "Skilled Birth Attendance among Women in Tharaka-Nithi County, Kenya",
+   "publication_year": 2017,
+   "authorships": [
+    {
+     "author": {
+      "display_name": "Eliphas Gitonga"
+     }
+    }
+   ],
+   "primary_location": {
+    "id": "doi:10.1155/2017/9740196",
+    "doi": "https://doi.org/10.1155/2017/9740196",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1155/2017/9740196",
+    "pdf_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "source": {
+     "id": "https://openalex.org/S4210228992",
+     "display_name": "Advances in Public Health",
+     "issn_l": "2314-7784",
+     "issn": [
+      "2314-7784",
+      "2356-6868"
+     ],
+     "is_oa": true,
+     "is_in_doaj": true,
+     "is_core": false,
+     "listed_in": [
+      "doaj",
+      "jufo-1",
+      "poland-20",
+      "russia-white-list-3"
+     ],
+     "host_organization": "https://openalex.org/P4310319869",
+     "host_organization_name": "Hindawi Publishing Corporation",
+     "host_organization_lineage": [
+      "https://openalex.org/P4310319869",
+      "https://openalex.org/P4310320595"
+     ],
+     "host_organization_lineage_names": [
+      "Hindawi Publishing Corporation",
+      "Wiley"
+     ],
+     "type": "journal"
+    },
+    "license": "cc-by",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Advances in Public Health",
+    "raw_type": "journal-article"
+   },
+   "best_oa_location": {
+    "id": "doi:10.1155/2017/9740196",
+    "doi": "https://doi.org/10.1155/2017/9740196",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1155/2017/9740196",
+    "pdf_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "source": {
+     "id": "https://openalex.org/S4210228992",
+     "display_name": "Advances in Public Health",
+     "issn_l": "2314-7784",
+     "issn": [
+      "2314-7784",
+      "2356-6868"
+     ],
+     "is_oa": true,
+     "is_in_doaj": true,
+     "is_core": false,
+     "listed_in": [
+      "doaj",
+      "jufo-1",
+      "poland-20",
+      "russia-white-list-3"
+     ],
+     "host_organization": "https://openalex.org/P4310319869",
+     "host_organization_name": "Hindawi Publishing Corporation",
+     "host_organization_lineage": [
+      "https://openalex.org/P4310319869",
+      "https://openalex.org/P4310320595"
+     ],
+     "host_organization_lineage_names": [
+      "Hindawi Publishing Corporation",
+      "Wiley"
+     ],
+     "type": "journal"
+    },
+    "license": "cc-by",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Advances in Public Health",
+    "raw_type": "journal-article"
+   },
+   "open_access": {
+    "is_oa": true,
+    "oa_status": "gold",
+    "oa_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "any_repository_has_fulltext": true
+   },
+   "abstract_inverted_index": {
+    "Background.": [
+     0
+    ],
+    "The": [
+     1
+    ],
+    "burden": [
+     2
+    ],
+    "of": [
+     3,
+     14
+    ],
+    "maternal": [
+     4
+    ],
+    "mortality": [
+     5
+    ],
+    "is": [
+     6
+    ],
+    "concentrated": [
+     7
+    ],
+    "in": [
+     8
+    ],
+    "sub-Saharan": [
+     9
+    ],
+    "Africa": [
+     10
+    ],
+    "with": [
+     11
+    ],
+    "an": [
+     12
+    ],
+    "estimation": [
+     13
+    ],
+    "500": [
+     15
+    ],
+    "000": [
+     16
+    ],
+    "deaths": [
+     17
+    ],
+    "annually.": [
+     18
+    ],
+    "In": [
+     19
+    ],
+    "2012,": [
+     20
+    ],
+    "about": [
+     21
+    ],
+    "forty": [
+     22
+    ],
+    "million": [
+     23
+    ],
+    "births": [
+     24
+    ],
+    "occurred": [
+     25
+    ],
+    "without": [
+     26
+    ],
+    "a": [
+     27
+    ],
+    "skilled": [
+     28
+    ],
+    "attendant": [
+     29
+    ]
+   },
+   "cited_by_count": 6,
+   "type": "article"
+  },
+  {
+   "id": "https://openalex.org/W7162689730",
+   "doi": "https://doi.org/10.5281/zenodo.20424467",
+   "display_name": "Barriers to Skilled Birth Attendance in Rural Kenya",
+   "publication_year": 2022,
+   "authorships": [
+    {
+     "author": {
+      "display_name": "Grace Wanjiku Mwangi"
+     }
+    },
+    {
+     "author": {
+      "display_name": "David Ochieng Otieno"
+     }
+    },
+    {
+     "author": {
+      "display_name": "James Kamau Ndirangu"
+     }
+    },
+    {
+     "author": {
+      "display_name": "Fatuma Adan Guyo"
+     }
+    }
+   ],
+   "primary_location": {
+    "id": "doi:10.5281/zenodo.20424467",
+    "doi": "https://doi.org/10.5281/zenodo.20424467",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.5281/zenodo.20424467",
+    "pdf_url": null,
+    "source": {
+     "id": "https://openalex.org/S4306400562",
+     "display_name": "Zenodo (CERN European Organization for Nuclear Research)",
+     "issn_l": null,
+     "issn": null,
+     "is_oa": true,
+     "is_in_doaj": false,
+     "is_core": false,
+     "listed_in": [],
+     "host_organization": "https://openalex.org/I67311998",
+     "host_organization_name": "European Organization for Nuclear Research",
+     "host_organization_lineage": [
+      "https://openalex.org/I67311998"
+     ],
+     "host_organization_lineage_names": [],
+     "type": "repository"
+    },
+    "license": "cc-by",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": null,
+    "is_accepted": false,
+    "is_published": false,
+    "raw_source_name": null,
+    "raw_type": "JournalArticle"
+   },
+   "best_oa_location": {
+    "id": "doi:10.5281/zenodo.20424467",
+    "doi": "https://doi.org/10.5281/zenodo.20424467",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.5281/zenodo.20424467",
+    "pdf_url": null,
+    "source": {
+     "id": "https://openalex.org/S4306400562",
+     "display_name": "Zenodo (CERN European Organization for Nuclear Research)",
+     "issn_l": null,
+     "issn": null,
+     "is_oa": true,
+     "is_in_doaj": false,
+     "is_core": false,
+     "listed_in": [],
+     "host_organization": "https://openalex.org/I67311998",
+     "host_organization_name": "European Organization for Nuclear Research",
+     "host_organization_lineage": [
+      "https://openalex.org/I67311998"
+     ],
+     "host_organization_lineage_names": [],
+     "type": "repository"
+    },
+    "license": "cc-by",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": null,
+    "is_accepted": false,
+    "is_published": false,
+    "raw_source_name": null,
+    "raw_type": "JournalArticle"
+   },
+   "open_access": {
+    "is_oa": true,
+    "oa_status": "green",
+    "oa_url": "https://doi.org/10.5281/zenodo.20424467",
+    "any_repository_has_fulltext": true
+   },
+   "abstract_inverted_index": {
+    "This": [
+     0
+    ],
+    "mixed-methods": [
+     1
+    ],
+    "study,": [
+     2
+    ],
+    "conducted": [
+     3
+    ],
+    "between": [
+     4
+    ],
+    "2021": [
+     5
+    ],
+    "and": [
+     6
+    ],
+    "2022,": [
+     7
+    ],
+    "investigated": [
+     8
+    ],
+    "the": [
+     9
+    ],
+    "multi-level": [
+     10
+    ],
+    "barriers": [
+     11
+    ],
+    "to": [
+     12
+    ],
+    "skilled": [
+     13
+    ],
+    "birth": [
+     14
+    ],
+    "attendance": [
+     15
+    ],
+    "(SBA)": [
+     16
+    ],
+    "in": [
+     17
+    ],
+    "rural": [
+     18
+    ],
+    "Kenya.": [
+     19
+    ],
+    "A": [
+     20
+    ],
+    "sequential": [
+     21
+    ],
+    "explanatory": [
+     22
+    ],
+    "design": [
+     23
+    ],
+    "was": [
+     24
+    ],
+    "employed,": [
+     25
+    ],
+    "beginning": [
+     26
+    ],
+    "with": [
+     27
+    ],
+    "a": [
+     28
+    ],
+    "cross-sectional": [
+     29
+    ]
+   },
+   "cited_by_count": 0,
+   "type": "article"
+  },
+  {
+   "id": "https://openalex.org/W0000000001",
+   "doi": "https://doi.org/10.1371/journal.pone.0162006",
+   "display_name": "Equality in Maternal and Newborn Health: Modelling Geographic Disparities in Utilisation of Care in Five East African Countries.",
+   "publication_year": 2016,
+   "authorships": [
+    {
+     "author": {
+      "display_name": "Eliphas Gitonga"
+     }
+    }
+   ],
+   "primary_location": {
+    "id": "doi:10.1155/2017/9740196",
+    "doi": "https://doi.org/10.1155/2017/9740196",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1155/2017/9740196",
+    "pdf_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "source": {
+     "id": "https://openalex.org/S4210228992",
+     "display_name": "Advances in Public Health",
+     "issn_l": "2314-7784",
+     "issn": [
+      "2314-7784",
+      "2356-6868"
+     ],
+     "is_oa": true,
+     "is_in_doaj": true,
+     "is_core": false,
+     "listed_in": [
+      "doaj",
+      "jufo-1",
+      "poland-20",
+      "russia-white-list-3"
+     ],
+     "host_organization": "https://openalex.org/P4310319869",
+     "host_organization_name": "Hindawi Publishing Corporation",
+     "host_organization_lineage": [
+      "https://openalex.org/P4310319869",
+      "https://openalex.org/P4310320595"
+     ],
+     "host_organization_lineage_names": [
+      "Hindawi Publishing Corporation",
+      "Wiley"
+     ],
+     "type": "journal"
+    },
+    "license": "cc-by",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Advances in Public Health",
+    "raw_type": "journal-article"
+   },
+   "best_oa_location": {
+    "id": "doi:10.1155/2017/9740196",
+    "doi": "https://doi.org/10.1155/2017/9740196",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1155/2017/9740196",
+    "pdf_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "source": {
+     "id": "https://openalex.org/S4210228992",
+     "display_name": "Advances in Public Health",
+     "issn_l": "2314-7784",
+     "issn": [
+      "2314-7784",
+      "2356-6868"
+     ],
+     "is_oa": true,
+     "is_in_doaj": true,
+     "is_core": false,
+     "listed_in": [
+      "doaj",
+      "jufo-1",
+      "poland-20",
+      "russia-white-list-3"
+     ],
+     "host_organization": "https://openalex.org/P4310319869",
+     "host_organization_name": "Hindawi Publishing Corporation",
+     "host_organization_lineage": [
+      "https://openalex.org/P4310319869",
+      "https://openalex.org/P4310320595"
+     ],
+     "host_organization_lineage_names": [
+      "Hindawi Publishing Corporation",
+      "Wiley"
+     ],
+     "type": "journal"
+    },
+    "license": "cc-by-nc",
+    "license_id": "https://openalex.org/licenses/cc-by",
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Advances in Public Health",
+    "raw_type": "journal-article"
+   },
+   "open_access": {
+    "is_oa": true,
+    "oa_status": "gold",
+    "oa_url": "http://downloads.hindawi.com/journals/aph/2017/9740196.pdf",
+    "any_repository_has_fulltext": true
+   },
+   "abstract_inverted_index": {
+    "Background.": [
+     0
+    ],
+    "The": [
+     1
+    ],
+    "burden": [
+     2
+    ],
+    "of": [
+     3,
+     14
+    ],
+    "maternal": [
+     4
+    ],
+    "mortality": [
+     5
+    ],
+    "is": [
+     6
+    ],
+    "concentrated": [
+     7
+    ],
+    "in": [
+     8
+    ],
+    "sub-Saharan": [
+     9
+    ],
+    "Africa": [
+     10
+    ],
+    "with": [
+     11
+    ],
+    "an": [
+     12
+    ],
+    "estimation": [
+     13
+    ],
+    "500": [
+     15
+    ],
+    "000": [
+     16
+    ],
+    "deaths": [
+     17
+    ],
+    "annually.": [
+     18
+    ],
+    "In": [
+     19
+    ],
+    "2012,": [
+     20
+    ],
+    "about": [
+     21
+    ],
+    "forty": [
+     22
+    ],
+    "million": [
+     23
+    ],
+    "births": [
+     24
+    ],
+    "occurred": [
+     25
+    ],
+    "without": [
+     26
+    ],
+    "a": [
+     27
+    ],
+    "skilled": [
+     28
+    ],
+    "attendant": [
+     29
+    ]
+   },
+   "cited_by_count": 40,
+   "type": "article"
+  },
+  {
+   "id": "https://openalex.org/W0000000002",
+   "doi": "https://doi.org/10.4314/example.v1i1.1",
+   "display_name": "Facility delivery in rural Tanzania",
+   "publication_year": 2020,
+   "authorships": [
+    {
+     "author": {
+      "display_name": "Eliphas Gitonga"
+     }
+    }
+   ],
+   "primary_location": {
+    "landing_page_url": "https://www.ajol.info/index.php/example/article/view/1",
+    "source": {
+     "display_name": "Example African Journal",
+     "type": "journal"
+    }
+   },
+   "best_oa_location": null,
+   "open_access": {
+    "is_oa": false,
+    "oa_status": "closed",
+    "oa_url": null
+   },
+   "abstract_inverted_index": null,
+   "cited_by_count": 2,
+   "type": "article"
+  }
+ ]
+}

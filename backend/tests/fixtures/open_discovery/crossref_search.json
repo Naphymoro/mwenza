@@ -1,0 +1,136 @@
+{
+ "status": "ok",
+ "message": {
+  "items": [
+   {
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.5463/thesis.745",
+    "type": "dissertation",
+    "is-referenced-by-count": 0,
+    "title": [
+     "Women\u2019s access to skilled birth attendance in Afghanistan"
+    ],
+    "author": [
+     {
+      "given": "Partamin",
+      "family": "Manalai",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       null
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.5463/thesis.745"
+   },
+   {
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.5348/100012m01kk2024ra",
+    "type": "journal-article",
+    "is-referenced-by-count": 2,
+    "title": [
+     "Barriers to utilization of skilled birth attendance among post-natal women in a North Horr ward, Marsarbit County, Kenya: A cross-sectional study"
+    ],
+    "author": [
+     {
+      "given": "Kame",
+      "family": "Wato Kofo",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Department of Health Systems, Amref International University, School of Public Health, Nairobi, Kenya"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Micah",
+      "family": "Matiang\u2019i",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Department of Health Systems, Amref International University, School of Public Health, Nairobi, Kenya"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Maureen",
+      "family": "Akolo",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Department of Health Systems, Amref International University, School of Public Health, Nairobi, Kenya"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "container-title": [
+     "Edorium Journal of Maternal and Child Health"
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2024,
+       9,
+       11
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.5348/100012m01kk2024ra"
+   },
+   {
+    "DOI": "10.1155/2017/9740196",
+    "title": [
+     "Skilled Birth Attendance among Women in Tharaka-Nithi County, Kenya"
+    ],
+    "author": [
+     {
+      "given": "Eliphas",
+      "family": "Gitonga"
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2017
+      ]
+     ]
+    },
+    "container-title": [
+     "Advances in Public Health"
+    ],
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "URL": "https://doi.org/10.1155/2017/9740196",
+    "is-referenced-by-count": 5,
+    "type": "journal-article"
+   }
+  ]
+ }
+}

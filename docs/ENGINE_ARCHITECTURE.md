@@ -60,3 +60,7 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## Paradigm–Method Checker
 
 `methodology.py` is the single catalogue of paradigms, strategies, sampling, data collection, analysis and quality criteria; both `golden_thread.py` and `paradigm.py` read from it, so a correction there changes both checks. `paradigm.py` evaluates the design layer by layer and treats departures from the catalogue as tensions to justify rather than errors, except where a design contradicts itself (for example a qualitative design with only statistical analysis, or deductive grounded theory). The Methodologist agent holds the `paradigm-method` skill and its `check_paradigm_fit` tool.
+
+## Open discovery (Phase A)
+
+`open_discovery.py` implements Phase A of `docs/analysis/DISCOVERY_ENGINE_DESIGN.md`: federated search over OpenAlex, Crossref and DOAJ with citation lookup through OpenCitations. Each adapter maps its API's records to one `OpenWork` shape, and the merge step keeps the most reusable abstract, so licence decisions are made once, in the engine, rather than in the browser. The source registry (`SOURCE_REGISTRY`) is the capability registry's record of each source's licence, attribution and rate limit. Phases B (local index) and C (licensed full text and passage search) build on the same `OpenWork` records.

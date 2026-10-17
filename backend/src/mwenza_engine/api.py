@@ -6,9 +6,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Path as PathParam, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from .discovery import DiscoveryError, LiteratureDiscovery, serialise
+from .open_discovery import SOURCE_REGISTRY, OpenDiscovery, serialise as serialise_open
 from .golden_thread import ResearchDesign
 from .paradigm import MethodDesign
 from .pipeline import NotebookEngine
@@ -23,6 +26,7 @@ engine = NotebookEngine(os.environ.get("MWENZA_LEDGER_PATH"))
 DOCUMENT_ID = r"^[\w.-]{1,120}$"
 model_gateway = ModelGateway()
 discovery = LiteratureDiscovery()
+open_discovery = OpenDiscovery()
 
 
 class QueryRequest(BaseModel):
@@ -50,6 +54,14 @@ class DiscoveryRequest(BaseModel):
     limit: int = Field(default=10, ge=1, le=25)
     year_from: int | None = Field(default=None, ge=1800, le=2100)
     year_to: int | None = Field(default=None, ge=1800, le=2100)
+    provider: Literal["open", "asta"] = "open"
+    document_id: str | None = Field(default=None, pattern=DOCUMENT_ID)
+
+
+class CitationLookupRequest(BaseModel):
+    doi: str = Field(min_length=6, max_length=300)
+    direction: Literal["citing", "references"] = "citing"
+    limit: int = Field(default=20, ge=1, le=50)
 
 
 class ProvenanceFields(BaseModel):
@@ -149,7 +161,7 @@ def agents() -> dict[str, object]:
 
 @app.get("/capabilities")
 def capabilities() -> dict[str, object]:
-    return {"tools": tool_catalogue(), "model_gateway": model_gateway.status().__dict__}
+    return {"tools": tool_catalogue(), "data_sources": {key: info.__dict__ for key, info in SOURCE_REGISTRY.items()}, "model_gateway": model_gateway.status().__dict__}
 
 
 @app.get("/graph")
@@ -203,25 +215,46 @@ def provenance(document_id: str = PathParam(pattern=DOCUMENT_ID), source_ids: li
 
 @app.get("/discovery/status")
 def discovery_status() -> dict[str, object]:
-    return discovery.status()
+    return {"default_provider": "open", "providers": {"open": open_discovery.status(), "asta": discovery.status()}}
 
 
-def _discover(search) -> dict[str, object]:
+def _discover(search) -> object:
     try:
-        results = search()
+        return search()
     except DiscoveryError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
-    return {"results": serialise(results), "attribution": discovery.status()["attribution"]}
+
+
+def _record_search(request: DiscoveryRequest, kind: str, count: int, sources: dict[str, str] | None = None) -> None:
+    if request.document_id:
+        years = f", {request.year_from or '…'}–{request.year_to or '…'}" if request.year_from or request.year_to else ""
+        engine.ledger.append(request.document_id, "discovery-search", "student", f"Searched {kind} via {request.provider}: \"{request.query}\"{years} ({count} results)", {"query": request.query, "provider": request.provider, "kind": kind, "results": count, "sources": sources or {}})
 
 
 @app.post("/discovery/papers")
 def discover_papers(request: DiscoveryRequest) -> dict[str, object]:
-    return _discover(lambda: discovery.search_papers(request.query, request.limit, request.year_from, request.year_to))
+    if request.provider == "asta":
+        results = serialise(_discover(lambda: discovery.search_papers(request.query, request.limit, request.year_from, request.year_to)))
+        _record_search(request, "papers", len(results))
+        return {"results": results, "attribution": discovery.status()["attribution"], "provider": "asta", "sources_status": {"asta": "ok"}}
+    works, status = _discover(lambda: open_discovery.search(request.query, request.limit, request.year_from, request.year_to))
+    _record_search(request, "papers", len(works), status)
+    return {"results": serialise_open(works), "attribution": open_discovery.status()["attribution"], "provider": "open", "sources_status": status}
 
 
 @app.post("/discovery/snippets")
 def discover_snippets(request: DiscoveryRequest) -> dict[str, object]:
-    return _discover(lambda: discovery.search_snippets(request.query, request.limit))
+    if request.provider != "asta":
+        raise HTTPException(status_code=501, detail="Passage search over open full text arrives in Phase C. Use the Asta provider if it is enabled for this engine.")
+    results = serialise(_discover(lambda: discovery.search_snippets(request.query, request.limit)))
+    _record_search(request, "passages", len(results))
+    return {"results": results, "attribution": discovery.status()["attribution"], "provider": "asta"}
+
+
+@app.post("/discovery/citations")
+def discover_citations(request: CitationLookupRequest) -> dict[str, object]:
+    works = _discover(lambda: open_discovery.citations(request.doi, request.direction, request.limit))
+    return {"results": serialise_open(works), "direction": request.direction, "attribution": SOURCE_REGISTRY["opencitations"].attribution + " " + SOURCE_REGISTRY["openalex"].attribution}
 
 
 @app.post("/paradigm/check")

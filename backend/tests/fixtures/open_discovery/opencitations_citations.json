@@ -1,0 +1,20 @@
+[
+ {
+  "oci": "06026072780-0610722232",
+  "citing": "omid:br/06026072780 doi:10.3126/cdj.v32i46.77010",
+  "cited": "omid:br/0610722232 doi:10.1155/2017/9740196 openalex:W2613808422",
+  "creation": "2024",
+  "timespan": "P7Y",
+  "journal_sc": "no",
+  "author_sc": "no"
+ },
+ {
+  "oci": "0605091423-0610722232",
+  "citing": "omid:br/0605091423 openalex:W4406727044 doi:10.1186/s12884-025-07164-4",
+  "cited": "omid:br/0610722232 doi:10.1155/2017/9740196 openalex:W2613808422",
+  "creation": "2025-01-22",
+  "timespan": "P8Y",
+  "journal_sc": "no",
+  "author_sc": "no"
+ }
+]

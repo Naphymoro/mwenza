@@ -1,0 +1,211 @@
+{
+ "total": 33,
+ "results": [
+  {
+   "last_updated": "2026-02-27T05:45:25Z",
+   "bibjson": {
+    "identifier": [
+     {
+      "id": "1932-6203",
+      "type": "eissn"
+     },
+     {
+      "id": "10.1371/journal.pone.0162006",
+      "type": "doi"
+     }
+    ],
+    "journal": {
+     "volume": "11",
+     "number": "8",
+     "country": "US",
+     "issns": [
+      "1932-6203"
+     ],
+     "publisher": "Public Library of Science (PLoS)",
+     "language": [
+      "EN"
+     ],
+     "title": "PLoS ONE"
+    },
+    "month": "0",
+    "year": "2016",
+    "start_page": "e0162006",
+    "subject": [
+     {
+      "code": "R",
+      "scheme": "LCC",
+      "term": "Medicine"
+     },
+     {
+      "code": "Q",
+      "scheme": "LCC",
+      "term": "Science"
+     }
+    ],
+    "author": [
+     {
+      "name": "Corrine W Ruktanonchai"
+     },
+     {
+      "name": "Nick W Ruktanonchai"
+     },
+     {
+      "name": "Andrea Nove"
+     },
+     {
+      "name": "Sofia Lopes"
+     },
+     {
+      "name": "Carla Pezzulo"
+     },
+     {
+      "name": "Claudio Bosco"
+     },
+     {
+      "name": "Victor A Alegana"
+     },
+     {
+      "name": "Clara R Burgert"
+     },
+     {
+      "name": "Rogers Ayiko"
+     },
+     {
+      "name": "Andrew Sek Charles"
+     },
+     {
+      "name": "Nkurunziza Lambert"
+     },
+     {
+      "name": "Esther Msechu"
+     },
+     {
+      "name": "Esther Kathini"
+     },
+     {
+      "name": "Zo\u00eb Matthews"
+     },
+     {
+      "name": "Andrew J Tatem"
+     }
+    ],
+    "link": [
+     {
+      "type": "fulltext",
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0162006&type=printable"
+     }
+    ],
+    "abstract": "<h4>Background</h4>Geographic accessibility to health facilities represents a fundamental barrier to utilisation of maternal and newborn health (MNH) services, driving historically hidden spatial pockets of localized inequalities. Here, we ",
+    "title": "Equality in Maternal and Newborn Health: Modelling Geographic Disparities in Utilisation of Care in Five East African Countries."
+   },
+   "id": "05ab1c9b5fed4ef79371863839f25914",
+   "created_date": "2017-11-11T23:52:52Z"
+  },
+  {
+   "last_updated": "2026-02-15T12:17:24Z",
+   "bibjson": {
+    "identifier": [
+     {
+      "id": "10.1186/s12913-025-13730-5",
+      "type": "doi"
+     },
+     {
+      "id": "1472-6963",
+      "type": "eissn"
+     }
+    ],
+    "journal": {
+     "volume": "26",
+     "number": "1",
+     "country": "GB",
+     "issns": [
+      "1472-6963"
+     ],
+     "publisher": "BMC",
+     "language": [
+      "EN"
+     ],
+     "title": "BMC Health Services Research"
+    },
+    "month": "1",
+    "keywords": [
+     "Health stakeholder",
+     "Skilled birth attendance",
+     "Voucher-based transport",
+     "Maternal health",
+     "Rural healthcare access",
+     "Qualitative study"
+    ],
+    "year": "2026",
+    "subject": [
+     {
+      "code": "RA1-1270",
+      "scheme": "LCC",
+      "term": "Public aspects of medicine"
+     }
+    ],
+    "author": [
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Zipporah Mbuthia"
+     },
+     {
+      "affiliation": "School of Public Health, Moi University",
+      "name": "Hillary Koros"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Theresia Mukethe"
+     },
+     {
+      "affiliation": "Ministry of Health and Sanitation",
+      "name": "Allan Owino"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Jesse Kihuha"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Caroline Wangire"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Moses Gatimu"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Angeline Kiamba"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "Julia King"
+     },
+     {
+      "affiliation": "Cancer & Infectious Diseases Epidemiology Research Unit (CIDERU), University of KwaZulu-Natal",
+      "name": "Khumbulani Hlongwana"
+     },
+     {
+      "affiliation": "Cancer & Infectious Diseases Epidemiology Research Unit (CIDERU), University of KwaZulu-Natal",
+      "name": "Themba Ginindza"
+     },
+     {
+      "affiliation": "Catholic Medical Mission Board",
+      "name": "James Kisia"
+     }
+    ],
+    "link": [
+     {
+      "content_type": "HTML",
+      "type": "fulltext",
+      "url": "https://doi.org/10.1186/s12913-025-13730-5"
+     }
+    ],
+    "abstract": "Abstract Background Reducing maternal, newborn and child mortality remains one of the top global public health priorities. Each year, approximately 303,000 mothers, globally, die during delivery. Stillbirths and neonatal deaths within the f",
+    "title": "Benefits and challenges of voucher-based transport for skilled birth attendance in Kitui County, Kenya: the health stakeholders\u2019 perspectives"
+   },
+   "id": "05fe1241e6e2436cb0c7b9404c4dc4b6",
+   "created_date": "2026-02-15T12:17:24Z"
+  }
+ ]
+}

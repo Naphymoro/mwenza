@@ -26,7 +26,7 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec("inspect_provenance", "Inspect provenance", "Read the hash-chained record of how a document was written, checked and revised."),
     ToolSpec("inspect_graph", "Inspect graph", "Read provenance-linked entities and candidate relations."),
     ToolSpec("draft_artifact", "Draft artifact", "Create a citation-aware research artefact."),
-    ToolSpec("search_literature", "Search literature", "Search published papers and passages through Ai2's Asta Scientific Corpus Tool.", "medium", True),
+    ToolSpec("search_literature", "Search literature", "Search published papers in open scholarly metadata (OpenAlex, Crossref, DOAJ), look up citations through OpenCitations, and, where enabled, search Ai2's Asta.", "medium", True),
     ToolSpec("plan_connector", "Plan connector", "Design a compliant future source connector.", "medium", True),
     ToolSpec("plan_run", "Plan analysis run", "Create a reproducible execution plan without running code.", "medium", True),
     ToolSpec("execute_code", "Execute code", "Run approved code in an isolated sandbox.", "high", True),
