@@ -7,6 +7,7 @@ from .ingest import ingest_path
 from .models import Answer, Citation, Entity, EvidenceSpan, Relation, SourceRecord
 from .retrieval import HybridRetriever
 from .agents import AgentOrchestrator
+from .golden_thread import GoldenThreadChecker, GoldenThreadReport, ResearchDesign
 
 
 class NotebookEngine:
@@ -15,6 +16,7 @@ class NotebookEngine:
         self.entities: list[Entity] = []
         self.relations: list[Relation] = []
         self.retriever = HybridRetriever()
+        self.golden_thread = GoldenThreadChecker()
         self.agents = AgentOrchestrator(self.query, lambda: len(self.sources), lambda: len(self.evidence))
 
     @property
@@ -40,3 +42,8 @@ class NotebookEngine:
         )
         text = " ".join(result.span.text[:420].strip() for result in results[:3])
         return Answer(question, text, citations, True, False, tuple(result.score for result in results), "extractive-evidence-summary")
+
+    def check_golden_thread(self, design: ResearchDesign, selected_source_ids: set[str] | None = None) -> GoldenThreadReport:
+        in_scope = [span for span in self.evidence if selected_source_ids is None or span.source_id in selected_source_ids]
+        evidence = (lambda text: self.query(text, selected_source_ids)) if in_scope else None
+        return self.golden_thread.check(design, evidence)

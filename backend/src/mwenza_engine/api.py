@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
+from .golden_thread import ResearchDesign
 from .pipeline import NotebookEngine
 from .model_gateway import ModelGateway
 from .tools import tool_catalogue
@@ -29,6 +30,28 @@ class AgentRunRequest(BaseModel):
 class WorkflowRunRequest(BaseModel):
     workflow_id: str = Field(min_length=2, max_length=80)
     objective: str = Field(min_length=2, max_length=4000)
+    source_ids: set[str] | None = None
+
+
+Items = list[str]
+
+
+class GoldenThreadRequest(BaseModel):
+    title: str = Field(default="", max_length=300)
+    problem: str = Field(default="", max_length=4000)
+    gap: str = Field(default="", max_length=4000)
+    aim: str = Field(default="", max_length=2000)
+    objectives: Items = Field(default_factory=list, max_length=20)
+    questions: Items = Field(default_factory=list, max_length=20)
+    hypotheses: Items = Field(default_factory=list, max_length=20)
+    paradigm: str = Field(default="", max_length=300)
+    approach: str = Field(default="", max_length=300)
+    strategy: str = Field(default="", max_length=500)
+    theory: str = Field(default="", max_length=500)
+    constructs: Items = Field(default_factory=list, max_length=30)
+    data_collection: Items = Field(default_factory=list, max_length=20)
+    analysis: Items = Field(default_factory=list, max_length=20)
+    findings: Items = Field(default_factory=list, max_length=40)
     source_ids: set[str] | None = None
 
 
@@ -98,3 +121,9 @@ def run_workflow(request: WorkflowRunRequest) -> dict[str, object]:
         return engine.agents.workflow(request.workflow_id, request.objective, request.source_ids)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/golden-thread/check")
+def check_golden_thread(request: GoldenThreadRequest) -> dict[str, object]:
+    design = ResearchDesign.from_dict(request.model_dump(exclude={"source_ids"}))
+    return engine.check_golden_thread(design, request.source_ids).to_dict()

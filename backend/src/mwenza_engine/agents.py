@@ -42,6 +42,7 @@ SKILLS: tuple[Skill, ...] = (
     Skill("source-librarian", "Source librarian", "Find, scope, and organise evidence already present in the notebook.", ("list_sources", "retrieve_evidence")),
     Skill("claim-extractor", "Claim extraction", "Turn source passages into reviewable claims without inventing connective tissue.", ("retrieve_evidence", "extract_claims")),
     Skill("method-critic", "Methods critic", "Surface study-design, measurement, sampling, and inference limitations for human review.", ("retrieve_evidence", "flag_limitations"), "medium"),
+    Skill("golden-thread", "Golden thread", "Check that problem, gap, questions, theory, design and analysis form one coherent argument.", ("check_alignment", "retrieve_evidence")),
     Skill("contradiction-hunter", "Contradiction hunter", "Compare source-backed passages and identify disagreements that require inspection.", ("retrieve_evidence", "compare_evidence"), "medium"),
     Skill("research-scout", "Research scout", "Prepare a lawful, provenance-preserving discovery plan for future connectors.", ("plan_connector",), "medium"),
     Skill("reproducer", "Reproducer", "Define a reproducible analysis run and record its inputs, code, and outputs.", ("plan_run",), "high"),
@@ -50,7 +51,7 @@ SKILLS: tuple[Skill, ...] = (
 
 AGENTS: tuple[AgentSpec, ...] = (
     AgentSpec("librarian", "Librarian", "Evidence librarian", "Maps a question to the bounded source collection.", ("source-librarian", "claim-extractor"), ("Use only selected sources.", "Keep source scope visible.")),
-    AgentSpec("methodologist", "Methodologist", "Scientific methods reviewer", "Finds methodological assumptions and limitations.", ("method-critic", "claim-extractor"), ("Do not declare a study invalid without evidence.", "Separate critique from fact.")),
+    AgentSpec("methodologist", "Methodologist", "Scientific methods reviewer", "Finds methodological assumptions and limitations.", ("method-critic", "golden-thread", "claim-extractor"), ("Do not declare a study invalid without evidence.", "Separate critique from fact.", "Teach and question; never rewrite the student's argument.")),
     AgentSpec("skeptic", "Sceptic", "Adversarial evidence reviewer", "Searches for contradictions, missing evidence, and alternative explanations.", ("contradiction-hunter", "method-critic"), ("Prefer a precise uncertainty to false confidence.", "Make disagreements inspectable.")),
     AgentSpec("reproducer", "Reproducer", "Reproducibility engineer", "Turns a proposed analysis into a traceable execution plan.", ("reproducer",), ("Never execute untrusted code in the web process.", "Record inputs and environment.")),
     AgentSpec("scout", "Scout", "Research discovery planner", "Designs future monitoring and connector work with provenance safeguards.", ("research-scout",), ("Respect robots.txt, terms, rate limits, and licensing.", "Never bypass access controls.")),

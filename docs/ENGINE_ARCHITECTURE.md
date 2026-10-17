@@ -40,3 +40,7 @@ The initial roles are Librarian, Methodologist, Sceptic, Reproducer, Scout,
 and Synthesiser. High-impact capabilities such as code execution, external
 discovery, and reverse engineering must remain separate tools with explicit
 permissions, provenance, and human approval.
+
+## Golden Thread Engine
+
+The methodology layer treats a thesis as a typed research-design graph rather than prose. `golden_thread.py` builds nodes for each design element and links them with lexical carry-over scores and methodology rules. The Methodologist agent holds the `golden-thread` skill and its `check_alignment` tool. Gap claims reuse the evidence contract: the gap is retrieved against selected sources and returned as candidate citations, never as a verdict. Model-assisted checks (semantic similarity, construct synonymy) can later replace the lexical scorer behind the same report contract.

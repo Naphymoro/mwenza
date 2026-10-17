@@ -20,6 +20,7 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec("extract_claims", "Extract claims", "Prepare reviewable claim candidates from evidence passages."),
     ToolSpec("compare_evidence", "Compare evidence", "Place source passages side by side for human review."),
     ToolSpec("flag_limitations", "Flag limitations", "Identify method and evidence limitations for review."),
+    ToolSpec("check_alignment", "Check golden thread", "Test alignment across problem, gap, questions, theory, design and analysis."),
     ToolSpec("inspect_graph", "Inspect graph", "Read provenance-linked entities and candidate relations."),
     ToolSpec("draft_artifact", "Draft artifact", "Create a citation-aware research artefact."),
     ToolSpec("plan_connector", "Plan connector", "Design a compliant future source connector.", "medium", True),
