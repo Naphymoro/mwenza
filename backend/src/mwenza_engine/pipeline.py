@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .graph import extract_graph
 from .ingest import checksum_bytes, extract_text_file, ingest_path
+from .paradigm import MethodDesign, ParadigmMethodChecker, ParadigmReport, method_flags, method_text
 from .provenance import ProvenanceLedger
 from .models import Answer, Citation, Entity, EvidenceSpan, Relation, SourceRecord
 from .retrieval import HybridRetriever
@@ -20,6 +21,7 @@ class NotebookEngine:
         self.retriever = HybridRetriever()
         self.golden_thread = GoldenThreadChecker()
         self.citation_auditor = CitationAuditor()
+        self.paradigm_checker = ParadigmMethodChecker()
         self.ledger = ProvenanceLedger(ledger_path)
         self.agents = AgentOrchestrator(self.query, lambda: len(self.sources), lambda: len(self.evidence))
 
@@ -77,3 +79,11 @@ class NotebookEngine:
     def provenance_report(self, document_id: str, selected_source_ids: set[str] | None = None) -> dict[str, object]:
         in_scope = {source_id: record for source_id, record in self.sources.items() if selected_source_ids is None or source_id in selected_source_ids}
         return self.ledger.report(document_id, in_scope)
+
+    def check_paradigm(self, design: MethodDesign) -> ParadigmReport:
+        return self.paradigm_checker.check(design)
+
+    def record_paradigm(self, document_id: str, design: MethodDesign, report: ParadigmReport, pasted_segments: list[str]) -> None:
+        counts = report.to_dict()["counts"]
+        summary = f"Paradigm-method check: {report.status}, {counts['error']} conflict(s), {counts['warning']} tension(s)"
+        self.ledger.record_check(document_id, "paradigm-method", method_text(design), pasted_segments, method_flags(report), summary)

@@ -56,3 +56,7 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## Literature discovery
 
 `discovery.py` is the first external connector. It keeps the evidence contract: search results are returned for inspection, and only user-selected abstracts or passages become notebook sources, each carrying a citation header, its URL and the retrieval date. The Scout agent holds the `search_literature` tool, which is marked medium risk and approval-required, matching the rule that external discovery stays a separate, permissioned capability. The connector is disabled unless a deployment opts in, because the Asta corpus licence restricts use to academic, non-commercial research.
+
+## Paradigm–Method Checker
+
+`methodology.py` is the single catalogue of paradigms, strategies, sampling, data collection, analysis and quality criteria; both `golden_thread.py` and `paradigm.py` read from it, so a correction there changes both checks. `paradigm.py` evaluates the design layer by layer and treats departures from the catalogue as tensions to justify rather than errors, except where a design contradicts itself (for example a qualitative design with only statistical analysis, or deductive grounded theory). The Methodologist agent holds the `paradigm-method` skill and its `check_paradigm_fit` tool.

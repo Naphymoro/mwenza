@@ -4,33 +4,13 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Callable, Iterable
 
 from .models import Answer, Citation
+from .methodology import analysis_kind as _analysis_kind, classify_question, find_paradigm, normalise_approach as _normalise_approach, strategy_approach as _strategy_approach
 from .text import content_terms as _terms, has_cue as _has_cue
 
 ALIGNED = 0.25
 WEAK = 0.10
 MIN_TERMS = 3
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
-
-EXPLORATORY_CUES = ("how do", "how does", "how did", "why", "experience", "experiences", "lived", "perception", "perceptions", "perceive", "meaning", "meanings", "understand", "understanding", "views", "describe", "explore")
-CONFIRMATORY_CUES = ("effect", "effects", "impact", "influence", "influences", "relationship", "association", "associated", "predict", "predicts", "predictor", "predictors", "correlation", "correlated", "difference", "differences", "compare", "to what extent", "affect", "affects", "determinants")
-
-QUANT_ANALYSIS = ("regression", "t-test", "anova", "ancova", "manova", "chi-square", "correlation", "structural equation", "sem", "descriptive statistics", "logistic", "factor analysis", "multilevel", "mann-whitney", "kruskal-wallis", "survival analysis", "difference-in-differences", "meta-analysis")
-QUAL_ANALYSIS = ("thematic", "content analysis", "ipa", "interpretative phenomenological", "grounded theory", "narrative analysis", "discourse analysis", "framework analysis", "constant comparison", "qualitative coding")
-
-STRATEGY_APPROACH = (
-    (("explanatory sequential", "exploratory sequential", "convergent", "mixed methods", "mixed-methods"), "mixed"),
-    (("survey", "experiment", "experimental", "quasi-experimental", "randomised", "randomized", "cross-sectional", "cohort", "correlational", "longitudinal panel"), "quantitative"),
-    (("ethnography", "ethnographic", "phenomenology", "phenomenological", "grounded theory", "narrative inquiry", "focus group", "in-depth interview"), "qualitative"),
-)
-
-PARADIGM_APPROACHES = (
-    (("post-positivism", "postpositivism", "post-positivist", "postpositivist"), {"quantitative", "mixed"}),
-    (("positivism", "positivist"), {"quantitative"}),
-    (("interpretivism", "interpretivist", "constructivism", "constructivist", "social constructionism", "constructionist"), {"qualitative"}),
-    (("pragmatism", "pragmatist"), {"quantitative", "qualitative", "mixed"}),
-    (("critical theory", "critical realism", "critical", "transformative"), {"qualitative", "mixed"}),
-    (("afrocentric", "afrocentricity", "ubuntu", "indigenous"), {"qualitative", "mixed"}),
-)
 
 GUIDANCE: dict[str, tuple[str, str]] = {
     "completeness": ("A postgraduate design states its problem, gap, aim, objectives, questions, paradigm, approach and analysis explicitly so an examiner can trace the argument.", "Which part of your design would an examiner look for first, and where is it written down?"),
@@ -155,39 +135,9 @@ def _status(score: float | None) -> str:
     return "aligned" if score >= ALIGNED else "weak" if score >= WEAK else "broken"
 
 
-def classify_question(text: str) -> str:
-    exploratory, confirmatory = _has_cue(text, EXPLORATORY_CUES), _has_cue(text, CONFIRMATORY_CUES)
-    return "mixed" if exploratory and confirmatory else "exploratory" if exploratory else "confirmatory" if confirmatory else "unclear"
-
-
-def _analysis_kind(text: str) -> str:
-    quant, qual = _has_cue(text, QUANT_ANALYSIS), _has_cue(text, QUAL_ANALYSIS)
-    return "both" if quant and qual else "quantitative" if quant else "qualitative" if qual else "unclear"
-
-
-def _strategy_approach(text: str) -> str:
-    for cues, approach in STRATEGY_APPROACH:
-        if _has_cue(text, cues):
-            return approach
-    return ""
-
-
-def _normalise_approach(text: str) -> str:
-    lowered = text.lower()
-    if "mixed" in lowered:
-        return "mixed"
-    if "quantitative" in lowered:
-        return "quantitative"
-    if "qualitative" in lowered:
-        return "qualitative"
-    return ""
-
-
 def _paradigm_approaches(text: str) -> set[str] | None:
-    for cues, approaches in PARADIGM_APPROACHES:
-        if _has_cue(text, cues):
-            return approaches
-    return None
+    paradigm = find_paradigm(text)
+    return set(paradigm.approaches) if paradigm else None
 
 
 class GoldenThreadChecker:

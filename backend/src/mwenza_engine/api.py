@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from .discovery import DiscoveryError, LiteratureDiscovery, serialise
 from .golden_thread import ResearchDesign
+from .paradigm import MethodDesign
 from .pipeline import NotebookEngine
 from .model_gateway import ModelGateway
 from .tools import tool_catalogue
@@ -60,6 +61,23 @@ class TextSourceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=300)
     text: str = Field(min_length=1, max_length=2_000_000)
     source_id: str | None = Field(default=None, pattern=r"^[\w.-]{1,120}$")
+
+
+class ParadigmRequest(ProvenanceFields):
+    title: str = Field(default="", max_length=300)
+    paradigm: str = Field(default="", max_length=300)
+    approach: str = Field(default="", max_length=300)
+    logic: str = Field(default="", max_length=300)
+    strategy: str = Field(default="", max_length=500)
+    time_horizon: str = Field(default="", max_length=300)
+    sampling: str = Field(default="", max_length=1000)
+    sample_size: str = Field(default="", max_length=1000)
+    data_collection: Items = Field(default_factory=list, max_length=20)
+    analysis: Items = Field(default_factory=list, max_length=20)
+    quality: Items = Field(default_factory=list, max_length=20)
+    hypotheses: Items = Field(default_factory=list, max_length=20)
+    questions: Items = Field(default_factory=list, max_length=20)
+    claims: str = Field(default="", max_length=2000)
 
 
 class CitationAuditRequest(ProvenanceFields):
@@ -204,3 +222,12 @@ def discover_papers(request: DiscoveryRequest) -> dict[str, object]:
 @app.post("/discovery/snippets")
 def discover_snippets(request: DiscoveryRequest) -> dict[str, object]:
     return _discover(lambda: discovery.search_snippets(request.query, request.limit))
+
+
+@app.post("/paradigm/check")
+def check_paradigm(request: ParadigmRequest) -> dict[str, object]:
+    design = MethodDesign.from_dict(request.model_dump(exclude={"document_id", "pasted_segments"}))
+    report = engine.check_paradigm(design)
+    if request.document_id:
+        engine.record_paradigm(request.document_id, design, report, request.pasted_segments)
+    return report.to_dict()

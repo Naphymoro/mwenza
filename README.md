@@ -30,6 +30,10 @@ python -m http.server 5173   # from the repository root, in a second terminal
 
 Open http://localhost:5173, choose **Golden thread**, and set the engine URL on the page if the engine runs on another port. The engine accepts browser requests from `localhost` origins only; set `MWENZA_CORS_ORIGIN_REGEX` for other deployments.
 
+## Paradigm and method
+
+The **Paradigm & method** page checks that every layer of a methodology follows from its paradigm, from approach to theory through strategy, time horizon and sampling to analysis and quality criteria. Each conflict shows coherent options both ways, and the page summarises what the chosen paradigm commits the researcher to. Designs can be imported from the golden thread page, and each check is recorded in the provenance ledger.
+
 ## Citation audit
 
 The **Citation audit** page checks a pasted draft against the sources selected in the evidence library. Each cited sentence is marked supported, partly supported, possibly contrasting, number not in source, unrelated, or not linked, and selecting it shows the passage it was compared with. It uses the same engine as the golden thread page; selected browser sources are sent to the engine before each check.

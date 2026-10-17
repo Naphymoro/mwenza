@@ -239,7 +239,7 @@ class ProvenanceLedger:
         origins = {origin: sum(1 for item in attribution if item["origin"] == origin) for origin in ORIGIN_LABELS}
         still_open = [item for item in attribution if item["open_feedback"]]
         unquoted = [item for item in attribution if any(not match["quoted"] for match in item["verbatim"])]
-        tool_names = {"golden-thread": "research-design alignment checks (golden thread)", "citation-audit": "citation checks"}
+        tool_names = {"golden-thread": "research-design alignment checks (golden thread)", "citation-audit": "citation checks", "paradigm-method": "paradigm-method fit checks"}
         lines = [
             f"# AI-use declaration: {document_id}",
             "",

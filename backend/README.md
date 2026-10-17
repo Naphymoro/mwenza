@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, and `POST /discovery/snippets`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `POST /paradigm/check`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, and `POST /discovery/snippets`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -80,3 +80,9 @@ MWENZA_ASTA=on ASTA_API_KEY=your-key uvicorn mwenza_engine.api:app --app-dir src
 `MWENZA_ASTA_URL` and `MWENZA_ASTA_TIMEOUT` (seconds, default 60) override the endpoint and timeout. Without a key, Asta accepts connections but tool calls can take minutes. Nothing is added to a notebook automatically: the browser adds an abstract or passage only when the user chooses it.
 
 OpenScholar is not connected. It has no hosted API: its [repository](https://github.com/AkariAsai/OpenScholar) provides a command-line pipeline whose local index needs very large memory, and its retriever endpoint is announced as planned. The connector boundary is ready for it once that endpoint exists.
+
+## Paradigm–Method Checker
+
+`POST /paradigm/check` checks each layer of a methodology against the stated paradigm, following the layers of the widely taught "research onion": paradigm, approach to theory (deductive, inductive, abductive), methodological choice, strategy, time horizon, sampling and sample-size justification, data collection, analysis, and quality criteria. It also checks that hypotheses state a relationship and that their constructs are measured, that questions about change are not answered with cross-sectional data, and that qualitative or purposively sampled designs do not claim statistical generalisation.
+
+Each layer gets a status (`coherent`, `tension`, `conflict`, `missing`, `unrecognised`), and inferred values say where they came from. Conflicts list coherent alternatives in both directions (keep the paradigm and change the method, or keep the method and reconsider the paradigm). The response includes a teaching profile of the paradigm's ontology, epistemology and axiology. The catalogue in `methodology.py` covers positivism, post-positivism, critical realism, interpretivism/constructivism, pragmatism, critical/transformative and Afrocentric/Indigenous paradigms (including Ubuntu); the golden thread check uses the same catalogue. Pass a `document_id` to record the check in the provenance ledger.

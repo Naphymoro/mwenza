@@ -2,7 +2,7 @@
 // shows where each paragraph came from, what Mwenza flagged, what changed
 // afterwards, and an AI-use declaration the student can hand to a supervisor.
 
-const PROVENANCE_DOCUMENTS = [["citation-draft", "Citation audit draft", "audit"], ["golden-thread", "Golden thread design", "thread"]];
+const PROVENANCE_DOCUMENTS = [["citation-draft", "Citation audit draft", "audit"], ["golden-thread", "Golden thread design", "thread"], ["paradigm-method", "Paradigm and method", "paradigm"]];
 const PROVENANCE_ORIGIN_CLASS = { typed: "ok", "present-at-start": "info", pasted: "warning", mixed: "warning" };
 const PROVENANCE_KINDS = { "text-snapshot": ["Text recorded", "student"], "ai-check": ["Mwenza check", "mwenza"] };
 
@@ -64,7 +64,7 @@ function renderProvenanceResults(ledger) {
   const report = ledger.report;
   if (!report) return provenanceRequest ? `<div class="gt-empty"><strong>Loading the ledger…</strong></div>` : "";
   const page = PROVENANCE_DOCUMENTS.find(([id]) => id === ledger.documentId);
-  if (!report.events.length) return `<div class="gt-empty"><strong>Nothing recorded yet for this document.</strong><p>Each ${page[2] === "audit" ? "citation audit" : "golden thread check"} records the text you submitted and what Mwenza flagged. Run one and it will appear here.</p><div class="gt-intro-actions"><button class="gt-btn primary" onclick="go('${page[2]}')">Go to ${esc(page[1].toLowerCase().replace(" draft", "").replace(" design", ""))}</button></div></div>`;
+  if (!report.events.length) return `<div class="gt-empty"><strong>Nothing recorded yet for this document.</strong><p>Each ${{ audit: "citation audit", thread: "golden thread check", paradigm: "paradigm and method check" }[page[2]]} records the text you submitted and what Mwenza flagged. Run one and it will appear here.</p><div class="gt-intro-actions"><button class="gt-btn primary" onclick="go('${page[2]}')">Go to ${esc(page[1].toLowerCase().replace(" draft", "").replace(" design", ""))}</button></div></div>`;
   const integrity = report.integrity;
   const counts = report.paragraphs.reduce((total, item) => ({ ...total, [item.origin]: (total[item.origin] || 0) + 1 }), {});
   return `<div class="gt-verdict ${integrity.valid ? "aligned" : "needs-revision"}"><div><span class="gt-kicker">Ledger integrity</span><strong>${integrity.valid ? "Hash chain intact" : "Chain broken"}</strong><p>${integrity.valid ? `All ${report.events.length} events for this document match their hashes. Head ${esc(integrity.head.slice(0, 16))}.` : `Event ${integrity.broken_at}: ${esc(integrity.reason)}. Records from that point on can't be trusted.`} The ledger is tamper-evident, not tamper-proof.</p></div><dl><div><dt>${report.paragraphs.length}</dt><dd>paragraphs</dd></div><div><dt>${counts.typed || 0}</dt><dd>typed in Mwenza</dd></div><div><dt>${(counts.pasted || 0) + (counts.mixed || 0)}</dt><dd>pasted</dd></div><div><dt>${report.paragraphs.filter((item) => item.revised_after_feedback).length}</dt><dd>revised after feedback</dd></div><div><dt>${report.paragraphs.filter((item) => item.open_feedback).length}</dt><dd>with open feedback</dd></div></dl></div>
