@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 YEAR = r"(?:1[89]|20)\d{2}[a-z]?"
 DOI = re.compile(r"\b10\.\d{4,9}/[^\s\"'<>()\[\]{}]+", re.IGNORECASE)
@@ -35,7 +36,13 @@ LIST_LINE = re.compile(r"^\s*(?:[-*+•]|\d+[.)]|#{1,6}\s|>|\|)")
 TRAILING_PUNCTUATION = ".,;:!?"
 
 # Words that look like a surname before a year but are not one ("In (2019)", "Since 2020").
-NOT_AUTHORS = frozenset("In On At By For From Since Until Before After During Between And Or The A An This That These Those See Also Table Figure Fig Page Chapter Section Version Phase Wave Round Year Spring Summer Autumn Fall Winter January February March April May June July August September October November December".split())
+NOT_AUTHORS = frozenset(
+    (
+        "In On At By For From Since Until Before After During Between And Or The A An This That These Those See Also "
+        "Table Figure Fig Page Chapter Section Version Phase Wave Round Year Spring Summer Autumn Fall Winter "
+        "January February March April May June July August September October November December"
+    ).split()
+)
 
 DRAFT_WORDS = 120
 DRAFT_SENTENCES = 4
@@ -103,7 +110,7 @@ class Evidence:
     author_years: set[tuple[str, int]] = field(default_factory=set)
 
     @classmethod
-    def collect(cls, tool_outputs: Iterable[str] = (), provided: Iterable[str] = ()) -> "Evidence":
+    def collect(cls, tool_outputs: Iterable[str] = (), provided: Iterable[str] = ()) -> Evidence:
         evidence = cls()
         for text in tool_outputs:
             evidence.add_text(text, "tool")
@@ -144,9 +151,14 @@ class Evidence:
             authors = [authors]
         year = record.get("year")
         work = Work(
-            doi=normalise_doi(str(record.get("doi") or "")), url=str(record.get("url") or ""), title=str(record.get("title") or ""),
+            doi=normalise_doi(str(record.get("doi") or "")),
+            url=str(record.get("url") or ""),
+            title=str(record.get("title") or ""),
             surnames=tuple(key for key in (surname_key(str(author)) for author in authors if str(author) != "et al.") if key),
-            year=year if isinstance(year, int) else None, retracted=bool(record.get("retracted")), preprint=bool(record.get("preprint")), origin=origin,
+            year=year if isinstance(year, int) else None,
+            retracted=bool(record.get("retracted")),
+            preprint=bool(record.get("preprint")),
+            origin=origin,
         )
         self.works.append(work)
         if work.doi:
@@ -262,18 +274,18 @@ def review_reply(reply: str, evidence: Evidence, draft_words: int = DRAFT_WORDS)
         doi_spans.append((match.start(), end))
         work = evidence.dois.get(doi)
         if work is None:
-            add("unverified-doi", reply[match.start():end], match.start(), end)
+            add("unverified-doi", reply[match.start() : end], match.start(), end)
         elif work.retracted:
-            add("retracted", reply[match.start():end], match.start(), end)
+            add("retracted", reply[match.start() : end], match.start(), end)
         elif work.preprint and "preprint" not in _sentence_window(reply, match.start()).lower():
-            add("preprint-uncaveated", reply[match.start():end], match.start(), end)
+            add("preprint-uncaveated", reply[match.start() : end], match.start(), end)
     for match in URL.finditer(reply):
         end = match.start() + len(match.group(0).rstrip(TRAILING_PUNCTUATION))
         if any(start <= match.start() < stop or match.start() <= start < end for start, stop in doi_spans):
             continue  # a doi.org link: judged as a DOI above
         link = normalise_url(match.group(0))
         if link not in evidence.urls and "/" in link:
-            add("unverified-link", reply[match.start():end], match.start(), end)
+            add("unverified-link", reply[match.start() : end], match.start(), end)
     for author, year, start, end in _author_year_spans(reply):
         if not evidence.knows_author_year(author, year):
             add("unverified-citation", reply[start:end], start, end)
@@ -293,9 +305,9 @@ def review_reply(reply: str, evidence: Evidence, draft_words: int = DRAFT_WORDS)
 
 def _sentence_window(text: str, position: int, reach: int = 300) -> str:
     """The sentence holding ``position`` and the one after it."""
-    before = text[max(0, position - reach):position]
+    before = text[max(0, position - reach) : position]
     start = max(before.rfind(". "), before.rfind("\n")) + 1
-    after = text[position:position + reach * 2]
+    after = text[position : position + reach * 2]
     ends = [match.end() for match in SENTENCE_END.finditer(after)]
     stop = ends[1] if len(ends) > 1 else len(after)
     return before[start:] + after[:stop]

@@ -120,4 +120,4 @@ def test_module_is_standard_library_only_so_deerflow_can_vendor_it():
     imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
     imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module}
     relative = [node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.level > 0]
-    assert not relative and imported <= {"__future__", "json", "re", "dataclasses", "typing"}
+    assert not relative and imported <= {"__future__", "collections", "json", "re", "dataclasses", "typing"}
