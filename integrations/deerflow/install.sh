@@ -3,6 +3,8 @@
 #
 #   integrations/deerflow/install.sh /path/to/deer-flow
 #
+#   MWENZA_AGENT_MODEL=mwenza-glm integrations/deerflow/install.sh /path/to/deer-flow     (pin the agent's model)
+#
 # Idempotent; run it again after changing the skill, the middleware or mwenza_engine/constitution.py.
 # Start the MCP server separately (docker-compose.deerflow.yml). The Gateway reloads extensions_config.json
 # and picks up the skill; restart it after changing the middleware.
@@ -32,7 +34,7 @@ cp "$here/mwenza_deerflow/__init__.py" "$here/mwenza_deerflow/middleware.py" "$p
 cp "$repo/backend/src/mwenza_engine/constitution.py" "$package/constitution.py"
 echo "middleware  -> $package"
 
-python3 - "$deerflow/extensions_config.json" "$here/agent" "$deerflow/backend/.deer-flow/agents/mwenza" <<'EOF'
+python3 - "$deerflow/extensions_config.json" "$here/agent" "$deerflow/backend/.deer-flow/agents/mwenza" "${MWENZA_AGENT_MODEL:-}" <<'EOF'
 import json, shutil, sys
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -62,9 +64,11 @@ source, target = Path(sys.argv[2]), Path(sys.argv[3])
 target.mkdir(parents=True, exist_ok=True)
 shutil.copy(source / "SOUL.md", target / "SOUL.md")
 mcp_id = str(uuid5(NAMESPACE_URL, "deerflow:mcp:mwenza"))
+# A model named in DeerFlow's config.yaml; empty uses DeerFlow's default model.
+model = f"model: {sys.argv[4]}\n" if sys.argv[4] else ""
 (target / "config.yaml").write_text(f"""name: mwenza
 display_name: Mwenza
-description: Research companion for postgraduate students. Supervises with evidence-first checks and open literature; never ghost-writes.
+{model}description: Research companion for postgraduate students. Supervises with evidence-first checks and open literature; never ghost-writes.
 skills: [mwenza]
 tool_groups: [file:read]
 mcp_plugins: [{mcp_id}]

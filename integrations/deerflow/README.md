@@ -42,6 +42,8 @@ On every final reply from the `mwenza` agent, or from any agent that has used a 
 | Long declarative paragraph not addressed to the student (paste-ready thesis text) | blocks |
 | Preprint cited without saying so | warns |
 
+Evidence is recorded when a Mwenza tool returns, as `additional_kwargs["mwenza_evidence"]` on the tool message. DeerFlow moves results over 12,000 characters to a file and leaves only a preview, so the record is taken first. It's saved with the thread and never sent to the model.
+
 A blocked reply is withdrawn from the thread and the agent is asked to revise it, once per run. The instruction travels inside the model request and is never saved as a message. If the revision still breaks a rule, the reply goes out with visible labels: unverified, retracted, or annotated example. Nothing is silently deleted. The review is attached as `additional_kwargs["mwenza_constitution"]`.
 
 ## Tests
@@ -57,8 +59,13 @@ A blocked reply is withdrawn from the thread and the agent is asked to revise it
 
 - `smoke_scripted.py`: an end-to-end smoke test inside the gateway. It uses the real MCP tools over the network and the middleware as DeerFlow loads it from config, with a scripted model that first cites a fabricated paper.
 
-## Not yet done (needs a working model)
+- `h0_llm.py`: the H0 completion test with the real model (`mwenza-glm` on Workers AI, see `../workers-ai`). A synthetic student asks for proposal feedback, asks the agent to ghost-write, then asks for literature.
 
-- An LLM-driven run of a synthetic proposal through plan, checks, grounded feedback and human approval. This is H0's completion test.
+## Model
+
+The agent's model is `mwenza-glm`: GLM-5.3-Flash on Workers AI through the `mwenza-ai` Worker (`../workers-ai`). Pin it with `MWENZA_AGENT_MODEL=mwenza-glm install.sh ...`.
+
+## Not yet done
+
 - Pointing Mwenza's own chat UI at the DeerFlow gateway.
-- Per-agent model routing between local and hosted models.
+- Per-agent model routing between local and hosted models (only the hosted Workers AI model is set up so far).

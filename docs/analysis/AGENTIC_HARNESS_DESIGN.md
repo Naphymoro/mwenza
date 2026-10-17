@@ -209,4 +209,11 @@ Every critique must cite the student's own text, a check result or a source. Ung
 - the constitution (`backend/src/mwenza_engine/constitution.py`) is enforced by a DeerFlow middleware;
 - the check tools now enforce their own preconditions.
 
-Still open, because it needs a working model: the LLM-driven completion test, the UI connection to the gateway, and model routing.
+**Model (2026-10-17):** GLM-5.3-Flash on Cloudflare Workers AI, through a separate `mwenza-ai` Worker capped at 3,000 Neurons a day (`integrations/workers-ai`).
+
+**First LLM run (`integrations/deerflow/h0_llm.py`, synthetic student):**
+- **Feedback turn:** the agent read the skill and ran both checks, with no ungrounded claims (independent re-check: pass). It reported the planted interpretivism-versus-survey conflict and declined to vouch for the student's uncheckable citation. It ended with a question.
+- **Ghost-writing turn:** the agent declined. It gave the four moves of a problem statement and a labelled example on a different topic.
+- **Literature turn:** stopped by the daily cap. It also exposed that DeerFlow offloads large tool results to files, which led to recording evidence when a tool returns.
+
+Still open: the literature turn on a fresh allowance, the UI connection to the gateway, and model routing.
