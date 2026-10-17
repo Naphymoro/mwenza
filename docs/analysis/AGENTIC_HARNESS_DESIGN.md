@@ -197,8 +197,16 @@ Every critique must cite the student's own text, a check result or a source. Ung
 | **H4 · Forge v2** | Factorised operators, the generalise operator, the composition agent, the outer meta-loop and skill lifecycle | The meta-loop raises inner-loop gain per budget. Lifecycle keeps the active skill set under its cap |
 | *(deferred)* Validation | Real student work, supervisor ratings, African-coverage gold set | As already agreed, run at the end |
 
-**Decisions needed from you:**
-1. Adopt DeerFlow as the runtime (recommended), or build a harness?
-2. Which models: hosted (which provider), local, or both?
-3. Where sandboxes run for the pilot: a local university server, or a cloud sandbox service?
-4. The consent policy for learning from student traces: opt-in only (recommended), or none at all.
+**Decisions (recorded 2026-10-17):**
+1. **Runtime:** adopt DeerFlow 2.0 (option A).
+2. **Models:** both hosted and local, routed per agent and task: local models for retrieval, summarising and private data; hosted models for critique and hard reasoning. Which hosted provider is still open.
+3. **Pilot sandboxes:** Docker on a university server, with data kept on site. Hardening (gVisor or a microVM, no Docker socket) as in §4.
+4. **Consent for learning from student traces:** open; opt-in only is recommended. Needed before H3, not before H0.
+
+**H0 progress (2026-10-17):** the model-free parts are built in `integrations/deerflow/`:
+- the MCP server runs on DeerFlow's network;
+- the `mwenza` skill and lead agent are installed;
+- the constitution (`backend/src/mwenza_engine/constitution.py`) is enforced by a DeerFlow middleware;
+- the check tools now enforce their own preconditions.
+
+Still open, because it needs a working model: the LLM-driven completion test, the UI connection to the gateway, and model routing.
