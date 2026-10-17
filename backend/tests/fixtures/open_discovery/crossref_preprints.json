@@ -1,0 +1,588 @@
+{
+ "status": "ok",
+ "message": {
+  "items": [
+   {
+    "DOI": "10.5194/egusphere-egu22-13166",
+    "title": [
+     "High resolution coupled climate-hydrology-dynamical Malaria transmission modeling for regional Malaria transmission in sub-Saharan Africa"
+    ],
+    "author": [
+     {
+      "given": "Mame Diarra",
+      "family": "Bousso Dieng",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0001-8859-5173",
+      "authenticated-orcid": false,
+      "given": "Jo\u00ebl",
+      "family": "Arnault",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0003-0975-6691",
+      "authenticated-orcid": false,
+      "given": "Adrian",
+      "family": "Tompkins",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Alie",
+      "family": "Si\u00e9",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Stephan",
+      "family": "Munga",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Jonas",
+      "family": "Franke",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Harald",
+      "family": "Kunstmann",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2022,
+       3,
+       28
+      ]
+     ]
+    },
+    "publisher": "Copernicus GmbH",
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "URL": "https://doi.org/10.5194/egusphere-egu22-13166"
+   },
+   {
+    "DOI": "10.1101/797050",
+    "title": [
+     "Shifting transmission risk for malaria in Africa with climate change: a framework for planning and intervention"
+    ],
+    "author": [
+     {
+      "ORCID": "https://orcid.org/0000-0002-4308-6321",
+      "authenticated-orcid": false,
+      "given": "Sadie J.",
+      "family": "Ryan",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0002-7988-0324",
+      "authenticated-orcid": false,
+      "given": "Catherine A.",
+      "family": "Lippi",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Fernanda",
+      "family": "Zermoglio",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2019,
+       10,
+       8
+      ]
+     ]
+    },
+    "publisher": "openRxiv",
+    "relation": {
+     "is-preprint-of": [
+      {
+       "id-type": "doi",
+       "id": "10.1186/s12936-020-03224-6",
+       "asserted-by": "subject"
+      }
+     ]
+    },
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "URL": "https://doi.org/10.1101/797050"
+   },
+   {
+    "publisher": "Springer Science and Business Media LLC",
+    "license": [
+     {
+      "start": {
+       "date-parts": [
+        [
+         2025,
+         9,
+         30
+        ]
+       ],
+       "date-time": "2025-09-30T00:00:00Z",
+       "timestamp": 1759190400000
+      },
+      "content-version": "unspecified",
+      "delay-in-days": 0,
+      "URL": "https://creativecommons.org/licenses/by/4.0/"
+     }
+    ],
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.21203/rs.3.rs-5571236/v1",
+    "title": [
+     "Climate-Driven Intraseasonal Variations in Malaria Transmission Potential Over Africa: K Malaria Index Approach"
+    ],
+    "author": [
+     {
+      "given": "Kyaw Than",
+      "family": "Oo",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Nanjing University of Information Science and Technology"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Emmanuel",
+      "family": "Yeboah",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Nanjing University of Information Science and Technology"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Omijeh Justus",
+      "family": "Eronmosele",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Modibbo Adama University"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Adeyinka Richard",
+      "family": "Aroyehun",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "University of Port Harcourt"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Daniel A.",
+      "family": "Darko",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "University of Ghana"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Peter Sanjo",
+      "family": "Adewale",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Osun State University"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Ashish",
+      "family": "Khanal",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "TERI School of Advanced Studies"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Fangmin",
+      "family": "Zhang",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Nanjing University of Information Science and Technology"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2025,
+       9,
+       30
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.21203/rs.3.rs-5571236/v1"
+   },
+   {
+    "publisher": "Springer Science and Business Media LLC",
+    "license": [
+     {
+      "start": {
+       "date-parts": [
+        [
+         2020,
+         8,
+         7
+        ]
+       ],
+       "date-time": "2020-08-07T00:00:00Z",
+       "timestamp": 1596758400000
+      },
+      "content-version": "unspecified",
+      "delay-in-days": 0,
+      "URL": "https://creativecommons.org/licenses/by/4.0/"
+     }
+    ],
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.21203/rs.3.rs-52165/v1",
+    "title": [
+     "Bionomics of Anopheles Arabiensis from Mamfene in KwaZulu-Natal (South Africa): An Area of High Malaria Transmission in the Province"
+    ],
+    "author": [
+     {
+      "ORCID": "https://orcid.org/0000-0003-4418-3841",
+      "authenticated-orcid": false,
+      "given": "Rajendra",
+      "family": "Maharaj",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "South African Medical Research Council"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Vishan",
+      "family": "Lakan",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "South African Medical Research Council"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Kiash",
+      "family": "Maharaj",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "University of KwaZulu-Natal"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2020,
+       8,
+       7
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.21203/rs.3.rs-52165/v1"
+   },
+   {
+    "publisher": "Springer Science and Business Media LLC",
+    "license": [
+     {
+      "start": {
+       "date-parts": [
+        [
+         2020,
+         10,
+         30
+        ]
+       ],
+       "date-time": "2020-10-30T00:00:00Z",
+       "timestamp": 1604016000000
+      },
+      "content-version": "unspecified",
+      "delay-in-days": 0,
+      "URL": "https://creativecommons.org/licenses/by/4.0/"
+     }
+    ],
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.21203/rs.3.rs-52165/v2",
+    "title": [
+     "Bionomics of Anopheles arabiensis from Mamfene in KwaZulu-Natal (South Africa): an area of high malaria transmission in the province"
+    ],
+    "author": [
+     {
+      "ORCID": "https://orcid.org/0000-0003-4418-3841",
+      "authenticated-orcid": false,
+      "given": "Rajendra",
+      "family": "Maharaj",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "South African Medical Research Council"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Vishan",
+      "family": "Lakan",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "South African Medical Research Council"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Kiash",
+      "family": "Maharaj",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "University of KwaZulu-Natal"
+       }
+      ],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2020,
+       10,
+       30
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.21203/rs.3.rs-52165/v2"
+   },
+   {
+    "publisher": "F1000 Research Ltd",
+    "license": [
+     {
+      "start": {
+       "date-parts": [
+        [
+         2023,
+         4,
+         30
+        ]
+       ],
+       "date-time": "2023-04-30T00:00:00Z",
+       "timestamp": 1682812800000
+      },
+      "content-version": "tdm",
+      "delay-in-days": 0,
+      "URL": "https://creativecommons.org/licenses/by/4.0/"
+     }
+    ],
+    "abstract": "<jats:p>Placeholder abstract used in tests.</jats:p>",
+    "DOI": "10.21955/gatesopenres.1117021.1",
+    "title": [
+     "Malaria cycles: Understanding the transmission and control of malaria"
+    ],
+    "author": [
+     {
+      "given": "Dagnechew",
+      "family": "Degefu",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Solomon",
+      "family": "Jagema",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "issued": {
+     "date-parts": [
+      [
+       2023,
+       4,
+       30
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.21955/gatesopenres.1117021.1"
+   }
+  ]
+ }
+}

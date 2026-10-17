@@ -55,7 +55,12 @@ class DiscoveryRequest(BaseModel):
     year_from: int | None = Field(default=None, ge=1800, le=2100)
     year_to: int | None = Field(default=None, ge=1800, le=2100)
     provider: Literal["open", "asta"] = "open"
+    scope: Literal["all", "peer-reviewed", "preprints"] = "all"
     document_id: str | None = Field(default=None, pattern=DOCUMENT_ID)
+
+
+class PublishedVersionRequest(BaseModel):
+    doi: str = Field(min_length=6, max_length=300)
 
 
 class CitationLookupRequest(BaseModel):
@@ -237,9 +242,9 @@ def discover_papers(request: DiscoveryRequest) -> dict[str, object]:
         results = serialise(_discover(lambda: discovery.search_papers(request.query, request.limit, request.year_from, request.year_to)))
         _record_search(request, "papers", len(results))
         return {"results": results, "attribution": discovery.status()["attribution"], "provider": "asta", "sources_status": {"asta": "ok"}}
-    works, status = _discover(lambda: open_discovery.search(request.query, request.limit, request.year_from, request.year_to))
-    _record_search(request, "papers", len(works), status)
-    return {"results": serialise_open(works), "attribution": open_discovery.status()["attribution"], "provider": "open", "sources_status": status}
+    works, status = _discover(lambda: open_discovery.search(request.query, request.limit, request.year_from, request.year_to, request.scope))
+    _record_search(request, "papers" if request.scope == "all" else request.scope, len(works), status)
+    return {"results": serialise_open(works), "attribution": open_discovery.status()["attribution"], "provider": "open", "scope": request.scope, "sources_status": status}
 
 
 @app.post("/discovery/snippets")
@@ -249,6 +254,12 @@ def discover_snippets(request: DiscoveryRequest) -> dict[str, object]:
     results = serialise(_discover(lambda: discovery.search_snippets(request.query, request.limit)))
     _record_search(request, "passages", len(results))
     return {"results": results, "attribution": discovery.status()["attribution"], "provider": "asta"}
+
+
+@app.post("/discovery/published-version")
+def discover_published_version(request: PublishedVersionRequest) -> dict[str, object]:
+    found = _discover(lambda: open_discovery.published_version(request.doi))
+    return {"doi": request.doi, "published": found, "attribution": SOURCE_REGISTRY["biorxiv"].attribution}
 
 
 @app.post("/discovery/citations")

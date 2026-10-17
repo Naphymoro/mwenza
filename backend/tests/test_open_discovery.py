@@ -28,9 +28,15 @@ class FakeOpenApis:
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         host = request.url.host
-        name = {"api.openalex.org": "openalex", "api.crossref.org": "crossref", "doaj.org": "doaj", "api.opencitations.net": "opencitations"}[host]
+        name = {"api.openalex.org": "openalex", "api.crossref.org": "crossref", "doaj.org": "doaj", "api.opencitations.net": "opencitations", "export.arxiv.org": "arxiv", "www.ebi.ac.uk": "europepmc", "zenodo.org": "zenodo", "api.biorxiv.org": "biorxiv"}[host]
         if name in self.failing:
             return httpx.Response(self.status, json={"error": "unavailable"})
+        if name == "arxiv":
+            return httpx.Response(200, text=(FIXTURES / "arxiv_search.xml").read_text(encoding="utf-8"), headers={"content-type": "application/atom+xml"})
+        if name in {"europepmc", "zenodo", "biorxiv"}:
+            return httpx.Response(200, json=fixture({"europepmc": "europepmc_preprints.json", "zenodo": "zenodo_africarxiv.json", "biorxiv": "biorxiv_pubs.json"}[name]))
+        if name == "crossref" and "type:posted-content" in request.url.params.get("filter", "") and "type:journal-article" not in request.url.params.get("filter", ""):
+            return httpx.Response(200, json=fixture("crossref_africarxiv.json" if "prefix:10.31730" in request.url.params["filter"] else "crossref_preprints.json"))
         if name == "openalex" and "doi:" in request.url.params.get("filter", ""):
             return httpx.Response(200, json={"results": [dict(fixture("openalex_search.json")["results"][0], doi="https://doi.org/10.1186/s12884-025-07164-4", display_name="A citing paper about facility delivery")]})
         body = {"openalex": "openalex_search.json", "crossref": "crossref_search.json", "doaj": "doaj_search.json", "opencitations": "opencitations_citations.json"}[name]
@@ -53,7 +59,7 @@ def by_doi(works):
 
 def test_federated_search_merges_by_doi_and_records_sources():
     works, status = discovery(FakeOpenApis()).search("skilled birth attendance Kenya", limit=20)
-    assert status == {"openalex": "ok", "crossref": "ok", "doaj": "ok"}
+    assert status == {name: "ok" for name in ("openalex", "crossref", "doaj", "europepmc", "arxiv", "africarxiv")}
     found = by_doi(works)
     assert len(found) == len([work.doi for work in works if work.doi])
     assert found[FIRST_DOI].sources == ["crossref", "openalex"]
@@ -95,8 +101,8 @@ def test_same_title_under_two_dois_is_listed_once():
     engine = discovery(FakeOpenApis())
     original = engine._search_crossref
 
-    def with_duplicate(*args):
-        works = original(*args)
+    def with_duplicate(*args, **kwargs):
+        works = original(*args, **kwargs)
         twin = type(works[0])(**{**works[0].__dict__, "doi": "10.9999/duplicate", "paper_id": "10.9999/duplicate", "sources": ["crossref"], "notes": []})
         return works + [twin]
 
@@ -111,7 +117,7 @@ def test_a_failing_source_is_reported_and_the_rest_still_answer():
     works, status = discovery(FakeOpenApis(failing={"doaj"})).search("skilled birth attendance Kenya")
     assert works and status["doaj"].startswith("error:") and status["openalex"] == "ok"
     with pytest.raises(DiscoveryError) as everything_down:
-        discovery(FakeOpenApis(failing={"openalex", "crossref", "doaj"})).search("skilled birth attendance Kenya")
+        discovery(FakeOpenApis(failing={"openalex", "crossref", "doaj", "europepmc", "arxiv", "zenodo"})).search("skilled birth attendance Kenya")
     assert everything_down.value.status == 502
 
 
@@ -168,8 +174,16 @@ def test_api_defaults_to_open_sources_and_records_searches(monkeypatch):
     assert client.post("/discovery/snippets", json={"query": "skilled birth attendance"}).status_code == 501
     cited = client.post("/discovery/citations", json={"doi": FIRST_DOI}).json()
     assert len(cited["results"]) == 2 and "OpenCitations" in cited["attribution"]
+    preprints = client.post("/discovery/papers", json={"query": "malaria transmission Africa", "scope": "preprints"}).json()
+    assert preprints["scope"] == "preprints" and preprints["results"] and all(work["preprint"] for work in preprints["results"])
+    assert client.post("/discovery/papers", json={"query": "malaria", "scope": "everything"}).status_code == 422
+    published = client.post("/discovery/published-version", json={"doi": "10.1101/2020.04.14.20065771"}).json()
+    assert published["published"]["published_doi"] == "10.1038/s41467-020-18450-4"
+    assert client.post("/discovery/published-version", json={"doi": "10.21203/rs.3.rs-1/v1"}).status_code == 422
     sources = client.get("/capabilities").json()["data_sources"]
-    assert set(sources) == {"openalex", "crossref", "doaj", "opencitations"} and all(item["commercial_use"] for item in sources.values())
+    assert set(sources) == {"openalex", "crossref", "doaj", "opencitations", "arxiv", "europepmc", "africarxiv", "biorxiv"}
+    assert all(sources[key]["commercial_use"] for key in ("openalex", "crossref", "doaj", "opencitations", "arxiv"))
+    assert "varies per preprint" in sources["europepmc"]["licence"]
 
 
 class Scripted:
@@ -261,8 +275,8 @@ def test_same_title_one_year_apart_by_the_same_author_is_one_work():
     engine = discovery(FakeOpenApis())
     original = engine._search_openalex
 
-    def with_version(*args):
-        works = original(*args)
+    def with_version(*args, **kwargs):
+        works = original(*args, **kwargs)
         twin = type(works[0])(**{**works[0].__dict__, "doi": "10.9999/preprint", "paper_id": "10.9999/preprint", "year": works[0].year + 1, "notes": [], "sources": ["openalex"]})
         other = type(works[0])(**{**works[0].__dict__, "doi": "10.9999/other", "paper_id": "10.9999/other", "year": works[0].year + 5, "notes": [], "sources": ["openalex"]})
         return works + [twin, other]
@@ -280,8 +294,8 @@ def test_front_matter_is_dropped_and_crossref_limited_to_research_types():
     engine = discovery(fake)
     original = engine._search_crossref
 
-    def with_news(*args):
-        works = original(*args)
+    def with_news(*args, **kwargs):
+        works = original(*args, **kwargs)
         news = type(works[0])(**{**works[0].__dict__, "doi": "10.9999/news", "paper_id": "10.9999/news", "title": "News in Brief", "notes": [], "sources": ["crossref"]})
         return [news] + works
 
@@ -289,10 +303,131 @@ def test_front_matter_is_dropped_and_crossref_limited_to_research_types():
     works, _ = engine.search("skilled birth attendance Kenya", limit=20)
     assert all(work.title != "News in Brief" for work in works)
     discovery(fake).search("maternal care")
-    assert "type:journal-article" in fake.sent("api.crossref.org")[-1].url.params["filter"]
+    assert any("type:journal-article" in request.url.params["filter"] for request in fake.sent("api.crossref.org"))
 
 
 def test_openalex_outranks_crossref_at_equal_rank():
     works, _ = discovery(FakeOpenApis()).search("skilled birth attendance Kenya", limit=20)
     first_single = next(work for work in works if len(work.sources) == 1)
     assert first_single.sources == ["openalex"]
+
+
+def test_preprint_sources_are_parsed_with_server_licence_and_published_links():
+    engine = discovery(FakeOpenApis())
+    arxiv = engine._search_arxiv("malaria transmission africa", 3, None, None)
+    assert [work.server for work in arxiv] == ["arXiv"] * 3 and all(work.preprint and work.abstract_storable for work in arxiv)
+    assert arxiv[1].doi == "10.48550/arxiv.1407.7612" and arxiv[1].published_doi == "10.1089/vbz.2015.1822"
+    assert arxiv[1].published_source == "reported by the authors on arXiv" and "Journal of vector borne" in arxiv[1].published_venue
+    epmc = by_doi(engine._search_europepmc("skilled birth attendance", 5, None, None))
+    medrxiv = epmc["10.64898/2026.07.22.26358729"]
+    assert medrxiv.server == "medRxiv" and medrxiv.oa_licence == "cc-by" and medrxiv.abstract_storable
+    unlicensed = epmc["10.21203/rs.3.rs-10821284/v1"]
+    assert unlicensed.server == "Research Square" and not unlicensed.abstract_storable
+    published = next(work for work in epmc.values() if work.published_url)
+    assert published.published_source.startswith("Europe PMC") and "europepmc.org/article/MED/" in published.published_url
+    crossref = by_doi(engine._search_crossref_preprints("malaria transmission Africa", 6, None, None))
+    biorxiv = crossref["10.1101/797050"]
+    assert biorxiv.server == "bioRxiv / medRxiv" and biorxiv.published_doi == "10.1186/s12936-020-03224-6" and biorxiv.published_source.startswith("Crossref")
+    assert crossref["10.21203/rs.3.rs-5571236/v1"].oa_licence == "cc-by" and crossref["10.21203/rs.3.rs-5571236/v1"].fulltext_reuse == "yes"
+
+
+def test_africarxiv_combines_zenodo_and_osf_records():
+    works = discovery(FakeOpenApis())._search_africarxiv("maternal health", 5, None, None)
+    zenodo = [work for work in works if work.server == "AfricArXiv (Zenodo)"]
+    osf = [work for work in works if work.server == "AfricArXiv (OSF)"]
+    assert zenodo and osf and all(work.preprint for work in works)
+    assert zenodo[0].oa_licence == "cc-by" and zenodo[0].abstract_storable and zenodo[0].authors
+    assert osf[0].doi == "10.31730/osf.io/test0"
+
+
+def test_scopes_choose_sources_and_filter_preprints():
+    fake = FakeOpenApis()
+    works, status = discovery(fake).search("malaria transmission Africa", limit=40, scope="all")
+    assert set(status) == {"openalex", "crossref", "doaj", "europepmc", "arxiv", "africarxiv"} and all(value == "ok" for value in status.values())
+    assert any(work.preprint for work in works) and any(not work.preprint for work in works)
+    reviewed, reviewed_status = discovery(FakeOpenApis()).search("malaria transmission Africa", limit=40, scope="peer-reviewed")
+    assert set(reviewed_status) == {"openalex", "crossref", "doaj"} and not any(work.preprint for work in reviewed)
+    fake = FakeOpenApis()
+    preprints, preprint_status = discovery(fake).search("malaria transmission Africa", limit=40, scope="preprints")
+    assert "doaj" not in preprint_status and fake.sent("api.openalex.org")[0].url.params["filter"].endswith("type:preprint")
+    with pytest.raises(DiscoveryError):
+        discovery(FakeOpenApis()).search("malaria", scope="everything")
+
+
+def test_a_published_version_in_the_results_replaces_its_preprint():
+    engine = discovery(FakeOpenApis())
+    original = engine._search_crossref
+
+    def with_published(*args, **kwargs):
+        works = original(*args, **kwargs)
+        preprint = engine._from_crossref_preprint(next(item for item in fixture("crossref_preprints.json")["message"]["items"] if item["DOI"] == "10.1101/797050"))
+        published = type(works[0])(**{**works[0].__dict__, "doi": "10.1186/s12936-020-03224-6", "paper_id": "10.1186/s12936-020-03224-6", "title": "A published malaria article", "preprint": False, "server": "", "notes": [], "sources": ["crossref"]})
+        return [preprint] + works + [published]
+
+    engine._search_crossref = with_published
+    works, _ = engine.search("malaria transmission Africa", limit=40)
+    dois = {work.doi for work in works}
+    assert "10.1186/s12936-020-03224-6" in dois and "10.1101/797050" not in dois
+    published = next(work for work in works if work.doi == "10.1186/s12936-020-03224-6")
+    assert any("Also posted as a preprint" in note for note in published.notes)
+
+
+def test_preprints_carry_a_not_peer_reviewed_note():
+    works, _ = discovery(FakeOpenApis()).search("malaria transmission Africa", limit=40, scope="preprints")
+    assert all(work.notes[0].startswith("Preprint") or work.retracted for work in works if work.preprint)
+
+
+def test_biorxiv_published_version_lookup():
+    engine = discovery(FakeOpenApis())
+    found = engine.published_version("https://doi.org/10.1101/2020.04.14.20065771")
+    assert found["published_doi"] == "10.1038/s41467-020-18450-4" and found["published_venue"] == "Nature Communications" and found["server"] == "medRxiv"
+    with pytest.raises(DiscoveryError) as wrong:
+        engine.published_version("10.21203/rs.3.rs-1/v1")
+    assert wrong.value.status == 422
+
+
+def test_arxiv_queries_and_licence_codes():
+    from mwenza_engine.preprints import arxiv_query, epmc_query, licence_code
+    assert arxiv_query('"malaria transmission" Africa AND children', 2015, None) == 'all:"malaria transmission" AND all:Africa AND all:children AND submittedDate:[201501010000 TO 210012312359]'
+    assert epmc_query("maternal health: Kenya*", None, 2020) == "(maternal health Kenya) AND SRC:PPR AND PUB_YEAR:[1900 TO 2020]"
+    assert [licence_code(value) for value in ("cc by", "CC-BY-4.0", "https://creativecommons.org/licenses/by-nc-nd/4.0/", "cc-by-4.0", "http://creativecommons.org/publicdomain/zero/1.0/", None)] == ["cc-by", "cc-by", "cc-by-nc-nd", "cc-by", "cc0", ""]
+
+
+def test_arxiv_is_paced_three_seconds_apart():
+    engine = OpenDiscovery(OpenDiscoveryConfig(), transport=httpx.MockTransport(FakeOpenApis()))
+    assert engine.pacers["arxiv"].interval == 3.0
+
+
+def test_unactivated_openalex_key_is_explained():
+    pending = Scripted(**{"api.openalex.org": [httpx.Response(403, json={"code": "key_not_activated", "message": "Key not activated"})]})
+    with pytest.raises(DiscoveryError, match="Activate your OpenAlex API key"):
+        discovery(pending, openalex_key="new-key")._search_openalex("malaria", 3, None, None)
+
+
+def test_surnames_match_across_name_formats_and_servers_are_named_once():
+    from mwenza_engine.open_discovery import _surname, canonical_server
+    assert _surname(("V. K. Ivanov",)) == _surname(("Ivanov, Vladimir",)) == "ivanov"
+    assert _surname(("Ag\u00e9ev, \u00c9douard",)) == "ageev" and _surname(()) == ""
+    assert canonical_server("arXiv (Cornell University)") == canonical_server("arXiv") == "arXiv"
+    assert canonical_server("SSRN Electronic Journal") == "SSRN" and canonical_server("OSF Preprints (OSF Preprints)") == "OSF Preprints"
+    assert canonical_server("", "10.26434/chemrxiv-2025-x") == "ChemRxiv" and canonical_server("AfricArXiv (Zenodo)") == "AfricArXiv (Zenodo)"
+
+
+def test_cross_posted_preprint_is_listed_once():
+    engine = discovery(FakeOpenApis())
+    original = engine._search_arxiv
+
+    def cross_posted(*args, **kwargs):
+        works = original(*args, **kwargs)
+        ssrn = type(works[0])(**{**works[0].__dict__, "doi": "10.2139/ssrn.1", "paper_id": "10.2139/ssrn.1", "server": "SSRN Electronic Journal", "year": works[0].year + 1, "authors": tuple(f"{name.split()[-1]}, {' '.join(name.split()[:-1])}" for name in works[0].authors), "notes": [], "sources": ["crossref"]})
+        return works + [ssrn]
+
+    engine._search_arxiv = cross_posted
+    works, _ = engine.search("malaria transmission africa", limit=40, scope="preprints")
+    assert "10.2139/ssrn.1" not in {work.doi for work in works}
+    assert any("Also registered under DOI 10.2139/ssrn.1" in note for work in works for note in work.notes)
+
+
+def test_crossref_429_without_retry_after_is_retried():
+    busy = Scripted(**{"api.crossref.org": [httpx.Response(429), httpx.Response(200, json=fixture("crossref_search.json"))]})
+    assert discovery(busy)._search_crossref("malaria", 3, None, None)

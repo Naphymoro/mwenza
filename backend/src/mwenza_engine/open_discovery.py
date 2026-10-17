@@ -5,6 +5,7 @@ import html
 import os
 import re
 import threading
+import unicodedata
 import time
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +16,7 @@ from urllib.parse import quote
 import httpx
 
 from .discovery import DiscoveryError
+from .preprints import PreprintSources
 
 CACHE_SECONDS = 24 * 3600
 CACHE_SIZE = 512
@@ -24,7 +26,7 @@ LINK_ONLY_HOSTS = ("ajol.info",)
 OPENALEX_SELECT = "id,doi,display_name,publication_year,authorships,primary_location,best_oa_location,open_access,abstract_inverted_index,cited_by_count,type,is_retracted,is_paratext,language"
 FALLBACK_BELOW = 3
 RETRIES = 2
-SOURCE_WEIGHTS = {"openalex": 1.0, "doaj": 0.8, "crossref": 0.6}
+SOURCE_WEIGHTS = {"openalex": 1.0, "europepmc": 0.9, "arxiv": 0.9, "doaj": 0.8, "africarxiv": 0.8, "crossref": 0.6}
 CROSSREF_TYPES = ("journal-article", "proceedings-article", "book-chapter", "posted-content", "dissertation", "report")
 FRONT_MATTER = re.compile(r"^(news in brief|in brief|editorial|editor'?s note|erratum|errata|correction|corrigendum|retraction notice|notice of retraction|front matter|back matter|table of contents|contents|index|issue information|masthead|letters?|book reviews?|announcements?)$", re.IGNORECASE)
 DOI_PATTERN = re.compile(r"\b(10\.\d{4,9}/[^\s\"<>]+)", re.IGNORECASE)
@@ -48,8 +50,17 @@ SOURCE_REGISTRY: dict[str, SourceInfo] = {
                            "No sign-up; identify with a contact email for the polite pool. Limits are advertised in x-rate-limit headers."),
     "doaj": SourceInfo("doaj", "DOAJ", "Metadata CC0", True, "Metadata from the Directory of Open Access Journals (CC0).", "https://doaj.org/terms/", "2 requests per second, bursts of up to 5."),
     "opencitations": SourceInfo("opencitations", "OpenCitations", "CC0", True, "Citation data from OpenCitations (CC0).", "https://opencitations.net/about", "Not stated on the pages checked; requests are spaced and cached."),
+    "arxiv": SourceInfo("arxiv", "arXiv", "Metadata (titles, abstracts, authors) CC0 1.0; e-prints stay under each author's licence and must be read on arXiv", True, "Preprint metadata from arXiv (CC0).", "https://info.arxiv.org/help/api/tou.html", "One request every three seconds, one connection at a time."),
+    "europepmc": SourceInfo("europepmc", "Europe PMC (preprints)", "Licence varies per preprint; Mwenza stores an abstract only under an open licence such as CC BY", False, "Preprint records from Europe PMC.", "https://europepmc.org/Preprints", "Not stated on the pages checked; requests are spaced and cached."),
+    "africarxiv": SourceInfo("africarxiv", "AfricArXiv (Zenodo and OSF)", "Licence per record (often CC BY 4.0); Mwenza stores an abstract only under an open licence. OSF-hosted items are found through Crossref prefix 10.31730 (attribution to AfricArXiv inferred from that prefix)", False, "African preprints from AfricArXiv via Zenodo and Crossref.", "https://zenodo.org/communities/africarxiv", "Not stated on the pages checked; requests are spaced and cached."),
+    "biorxiv": SourceInfo("biorxiv", "bioRxiv / medRxiv API", "Used only to find a preprint's published version", True, "Published-version links from the bioRxiv and medRxiv API.", "https://api.biorxiv.org/", "Not stated on the API page; used on request only."),
 }
-ATTRIBUTION = "Open metadata from OpenAlex (CC0), Crossref, DOAJ (CC0) and OpenCitations (CC0)."
+ATTRIBUTION = "Open metadata from OpenAlex (CC0), Crossref, DOAJ (CC0) and OpenCitations (CC0); preprints from arXiv (CC0 metadata), Europe PMC and AfricArXiv."
+SCOPES = {
+    "all": ("openalex", "crossref", "doaj", "europepmc", "arxiv", "africarxiv"),
+    "peer-reviewed": ("openalex", "crossref", "doaj"),
+    "preprints": ("openalex", "crossref", "europepmc", "arxiv", "africarxiv"),
+}
 
 
 @dataclass
@@ -77,6 +88,12 @@ class OpenWork:
     retracted: bool = False
     language: str = ""
     match: str = "title or abstract"
+    preprint: bool = False
+    server: str = ""
+    published_doi: str = ""
+    published_venue: str = ""
+    published_url: str = ""
+    published_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -106,7 +123,31 @@ def _title_key(title: str, year: int | None) -> str:
 
 
 def _surname(authors: tuple[str, ...]) -> str:
-    return authors[0].split()[-1].lower() if authors and authors[0].split() else ""
+    """First author's surname from either "Given Surname" or "Surname, Given", without accents or case."""
+    if not authors or not authors[0].strip():
+        return ""
+    name = authors[0].split(",", 1)[0] if "," in authors[0] else authors[0].split()[-1]
+    plain = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z]", "", plain.lower())
+
+
+SERVER_NAMES = (("medrxiv", "medRxiv"), ("biorxiv", "bioRxiv"), ("chemrxiv", "ChemRxiv"), ("arxiv", "arXiv"), ("ssrn", "SSRN"), ("research square", "Research Square"), ("authorea", "Authorea"),
+                ("preprints.org", "Preprints.org"), ("socarxiv", "SocArXiv"), ("psyarxiv", "PsyArXiv"), ("africarxiv", "AfricArXiv"), ("osf preprints", "OSF Preprints"), ("open res africa", "Open Research Africa"))
+
+
+def canonical_server(name: str, doi: str = "") -> str:
+    """One display name per preprint server, whatever the source calls it; the DOI prefix fills gaps."""
+    from .preprints import PREFIX_SERVERS
+
+    lowered = (name or "").lower()
+    if "afric" in lowered and ("zenodo" in lowered or "osf" in lowered):
+        return name
+    for needle, label in SERVER_NAMES:
+        if needle in lowered:
+            return label
+    if name:
+        return re.sub(r"\s*\(([^)]*)\)$", "", name).strip() or name
+    return PREFIX_SERVERS.get(doi.split("/", 1)[0], "Preprint server") if doi else "Preprint server"
 
 
 def find_doi(text: str) -> str:
@@ -196,7 +237,7 @@ class Pacer:
             self.last = time.monotonic()
 
 
-class OpenDiscovery:
+class OpenDiscovery(PreprintSources):
     """Federated literature search over openly licensed scholarly metadata.
 
     OpenAlex, Crossref and DOAJ are queried in parallel, merged by DOI (or
@@ -211,7 +252,10 @@ class OpenDiscovery:
         agent = "Mwenza/0.1 (research notebook" + (f"; mailto:{self.config.contact_email}" if self.config.contact_email else "") + ")"
         self.client = httpx.Client(timeout=self.config.timeout, transport=transport, headers={"User-Agent": agent}, follow_redirects=True)
         self.cache = TTLCache()
-        self.pacers = {"openalex": Pacer(0.1 if pace else 0), "crossref": Pacer(0.4 if pace else 0), "doaj": Pacer(0.5 if pace else 0), "opencitations": Pacer(0.5 if pace else 0)}
+        intervals = {"openalex": 0.1, "crossref": 0.4, "doaj": 0.5, "opencitations": 0.5, "arxiv": 3.0, "europepmc": 0.2, "zenodo": 1.0, "biorxiv": 0.5}
+        self.pacers = {name: Pacer(seconds if pace else 0) for name, seconds in intervals.items()}
+        # arXiv asks for one connection at a time; Crossref throttles concurrent requests from one client.
+        self.single = {name: threading.Lock() for name in ("arxiv", "crossref")}
         self.openalex_remaining: int | None = None
         self.sleep = time.sleep
 
@@ -227,15 +271,19 @@ class OpenDiscovery:
             "configure_with": "Optional: MWENZA_OPENALEX_KEY (free OpenAlex key, 10× the daily budget) and MWENZA_CONTACT_EMAIL (identifies Mwenza to Crossref and OpenAlex).",
         }
 
-    def _get(self, source: str, url: str, params: dict[str, Any], allow_missing: bool = False) -> Any:
+    def _get(self, source: str, url: str, params: dict[str, Any], allow_missing: bool = False, as_text: bool = False) -> Any:
         """GET with pacing and retries: server errors and timeouts are retried with backoff,
         and a 429 with a short Retry-After is retried once."""
-        name = SOURCE_REGISTRY[source].name
+        name = SOURCE_REGISTRY["africarxiv" if source == "zenodo" else source].name
         clean = {key: value for key, value in params.items() if value not in (None, "")}
         for attempt in range(RETRIES + 1):
             self.pacers[source].wait()
             try:
-                response = self.client.get(url, params=clean)
+                if source in self.single:
+                    with self.single[source]:
+                        response = self.client.get(url, params=clean)
+                else:
+                    response = self.client.get(url, params=clean)
             except (httpx.TimeoutException, httpx.TransportError) as exc:
                 if attempt < RETRIES:
                     self.sleep(0.5 * (attempt + 1))
@@ -249,6 +297,9 @@ class OpenDiscovery:
                 if not budget_spent and retry_after.isdigit() and int(retry_after) <= 5 and attempt < RETRIES:
                     self.sleep(int(retry_after))
                     continue
+                if not budget_spent and not retry_after and source != "openalex" and attempt < RETRIES:
+                    self.sleep(1.5 * (attempt + 1))
+                    continue
                 if budget_spent:
                     reset = response.headers.get("x-ratelimit-reset", "")
                     when = f" It resets in about {max(1, round(int(reset) / 3600))} hour(s)." if reset.isdigit() else ""
@@ -256,6 +307,8 @@ class OpenDiscovery:
                     raise DiscoveryError(f"OpenAlex's daily budget for this engine is used up.{when}{hint}", 429)
                 raise DiscoveryError(f"{name} is limiting requests; try again shortly.", 429)
             if response.status_code in {401, 403} and source == "openalex" and self.config.openalex_key:
+                if "key_not_activated" in response.text:
+                    raise DiscoveryError("The OpenAlex key is not activated yet: open the email from OpenAlex titled \"Activate your OpenAlex API key\" and click its link.", 502)
                 raise DiscoveryError("OpenAlex rejected the configured MWENZA_OPENALEX_KEY.", 502)
             if response.status_code == 404 and allow_missing:
                 return None
@@ -269,7 +322,7 @@ class OpenDiscovery:
                 except ValueError:
                     pass
                 raise DiscoveryError(f"{name} returned HTTP {response.status_code}{': ' + detail if detail else ''}.", 502)
-            return response.json()
+            return response.text if as_text else response.json()
         raise DiscoveryError(f"{name} did not answer after {RETRIES + 1} attempts.", 502)
 
     def _cached(self, key: tuple, fetch: Callable[[], Any]) -> Any:
@@ -283,9 +336,9 @@ class OpenDiscovery:
     def _openalex_params(self, **params: Any) -> dict[str, Any]:
         return {**params, "api_key": self.config.openalex_key, "mailto": self.config.contact_email}
 
-    def _search_openalex(self, query: str, limit: int, year_from: int | None, year_to: int | None) -> list[OpenWork]:
+    def _search_openalex(self, query: str, limit: int, year_from: int | None, year_to: int | None, kind: str = "") -> list[OpenWork]:
         """Search titles and abstracts first; widen to OpenAlex's full-text search only when that finds too little."""
-        years = [item for item in (f"from_publication_date:{year_from}-01-01" if year_from else "", f"to_publication_date:{year_to}-12-31" if year_to else "") if item]
+        years = [item for item in (f"from_publication_date:{year_from}-01-01" if year_from else "", f"to_publication_date:{year_to}-12-31" if year_to else "", kind) if item]
         focused = self._get("openalex", "https://api.openalex.org/works", self._openalex_params(filter=",".join([f"title_and_abstract.search:{query}", "is_paratext:false", *years]), select=OPENALEX_SELECT, **{"per-page": limit}))
         works = [self._from_openalex(item) for item in focused.get("results", [])]
         if len(works) < min(FALLBACK_BELOW, limit):
@@ -305,10 +358,10 @@ class OpenDiscovery:
         record = self._get("crossref", f"https://api.crossref.org/works/{quote(doi, safe='/')}", {"mailto": self.config.contact_email}, allow_missing=True)
         return [self._from_crossref(record["message"])] if record and record.get("message") else []
 
-    def _search_crossref(self, query: str, limit: int, year_from: int | None, year_to: int | None) -> list[OpenWork]:
-        filters = ",".join(item for item in (*(f"type:{kind}" for kind in CROSSREF_TYPES), f"from-pub-date:{year_from}" if year_from else "", f"until-pub-date:{year_to}" if year_to else "") if item)
-        payload = self._get("crossref", "https://api.crossref.org/works", {"query.bibliographic": query, "rows": limit, "filter": filters, "mailto": self.config.contact_email, "select": "DOI,title,author,issued,container-title,abstract,URL,is-referenced-by-count,type"})
-        return [self._from_crossref(item) for item in payload.get("message", {}).get("items", [])]
+    def _search_crossref(self, query: str, limit: int, year_from: int | None, year_to: int | None, types: tuple[str, ...] = CROSSREF_TYPES) -> list[OpenWork]:
+        filters = ",".join(item for item in (*(f"type:{kind}" for kind in types), f"from-pub-date:{year_from}" if year_from else "", f"until-pub-date:{year_to}" if year_to else "") if item)
+        payload = self._get("crossref", "https://api.crossref.org/works", {"query.bibliographic": query, "rows": limit, "filter": filters, "mailto": self.config.contact_email, "select": "DOI,title,author,issued,container-title,abstract,URL,is-referenced-by-count,type,publisher,license,relation"})
+        return [self._from_crossref_preprint(item) if item.get("type") == "posted-content" else self._from_crossref(item) for item in payload.get("message", {}).get("items", [])]
 
     def _search_doaj(self, query: str, limit: int, year_from: int | None, year_to: int | None) -> list[OpenWork]:
         text = clean_doaj_query(query)
@@ -333,6 +386,7 @@ class OpenDiscovery:
             open_access=access.get("is_oa"), oa_url=best.get("pdf_url") or best.get("landing_page_url") or access.get("oa_url") or "", oa_licence=best.get("license") or "",
             fulltext_reuse=fulltext_reuse(best.get("license")) if access.get("is_oa") else "no", cited_by_count=item.get("cited_by_count"), sources=["openalex"],
             retracted=bool(item.get("is_retracted")), language=item.get("language") or "",
+            preprint=item.get("type") == "preprint", server=((primary.get("source") or {}).get("display_name") or "") if item.get("type") == "preprint" else "",
         )
         return work
 
@@ -347,6 +401,7 @@ class OpenDiscovery:
             venue=_clean((item.get("container-title") or [""])[0]), url=item.get("URL") or (f"https://doi.org/{doi}" if doi else ""),
             abstract=abstract, abstract_source="crossref" if abstract else "", abstract_storable=False, abstract_licence="May be under publisher copyright (Crossref)" if abstract else "",
             cited_by_count=item.get("is-referenced-by-count"), sources=["crossref"],
+            preprint=item.get("type") == "posted-content", server=(item.get("publisher") or "") if item.get("type") == "posted-content" else "",
         )
 
     @staticmethod
@@ -379,6 +434,10 @@ class OpenDiscovery:
             target.oa_licence, target.fulltext_reuse = other.oa_licence, other.fulltext_reuse
         target.cited_by_count = max((value for value in (target.cited_by_count, other.cited_by_count) if value is not None), default=None)
         target.retracted = target.retracted or other.retracted
+        target.preprint = target.preprint or other.preprint
+        target.server = target.server or other.server
+        if not target.published_url and other.published_url:
+            target.published_doi, target.published_venue, target.published_url, target.published_source = other.published_doi, other.published_venue, other.published_url, other.published_source
         target.language = target.language or other.language
         if other.match == "title or abstract":
             target.match = "title or abstract"
@@ -394,13 +453,18 @@ class OpenDiscovery:
             work.notes.append("The abstract may be under publisher copyright, so only the reference can be added.")
         if work.retracted:
             work.notes.insert(0, "This work has been retracted. Do not cite it as evidence; if you discuss it, say that it was retracted.")
+        if work.preprint:
+            work.server = canonical_server(work.server, work.doi)
+            work.notes.insert(0, f"Preprint{' on ' + work.server if work.server else ''}: not peer reviewed. Prefer the published version when one exists.")
+            if work.published_url:
+                work.notes.append(f"A published version exists ({work.published_source}): {work.published_venue or work.published_doi}.")
         if work.match == "full text":
             work.notes.append("Matched only in the full text, not the title or abstract, so it may be less relevant.")
         if work.fulltext_reuse == "restricted":
             work.notes.append(f"Open access under {work.oa_licence.upper()}: reuse is limited (non-commercial or no derivatives).")
         return work
 
-    def search(self, query: str, limit: int = 10, year_from: int | None = None, year_to: int | None = None) -> tuple[list[OpenWork], dict[str, str]]:
+    def search(self, query: str, limit: int = 10, year_from: int | None = None, year_to: int | None = None, scope: str = "all") -> tuple[list[OpenWork], dict[str, str]]:
         doi = find_doi(query)
         remainder = re.sub(r"(https?://(dx\.)?doi\.org/|doi:)", " ", DOI_PATTERN.sub(" ", query), flags=re.IGNORECASE)
         if doi and len(clean_query(remainder)) < 3:
@@ -411,13 +475,20 @@ class OpenDiscovery:
         query = clean_query(query)
         if len(query) < 3:
             raise DiscoveryError("The search has no searchable words after removing symbols and wildcards.", 422)
-        searches = {"openalex": self._search_openalex, "crossref": self._search_crossref, "doaj": self._search_doaj}
+        if scope not in SCOPES:
+            raise DiscoveryError(f"Unknown scope '{scope}'.", 422)
+        available = {
+            "openalex": lambda *args: self._search_openalex(*args, kind={"peer-reviewed": "type:!preprint", "preprints": "type:preprint"}.get(scope, "")),
+            "crossref": (lambda *args: self._search_crossref_preprints(*args)) if scope == "preprints" else (lambda *args: self._search_crossref(*args, types=tuple(kind for kind in CROSSREF_TYPES if kind != "posted-content") if scope == "peer-reviewed" else CROSSREF_TYPES)),
+            "doaj": self._search_doaj, "europepmc": self._search_europepmc, "arxiv": self._search_arxiv, "africarxiv": self._search_africarxiv,
+        }
+        searches = {name: available[name] for name in SCOPES[scope]}
         results: dict[str, list[OpenWork]] = {}
         status: dict[str, str] = {}
 
         def run(name: str) -> None:
             try:
-                found = self._cached((name, query.lower(), limit, year_from, year_to), lambda: searches[name](query, limit, year_from, year_to))
+                found = self._cached((name, scope, query.lower(), limit, year_from, year_to), lambda: searches[name](query, limit, year_from, year_to))
                 results[name] = copy.deepcopy(found)
                 status[name] = "ok"
             except DiscoveryError as exc:
@@ -442,13 +513,22 @@ class OpenDiscovery:
         ranked: list[OpenWork] = []
         for key in sorted(merged, key=lambda key: scores[key], reverse=True):
             work = merged[key]
-            twin = next((kept for kept in ranked if self._same_work(kept, work)), None)
+            twin = next((kept for kept in ranked if self._same_work(kept, work) or (kept.published_doi and kept.published_doi == work.doi) or (work.published_doi and work.published_doi == kept.doi)), None)
             if twin is None:
                 ranked.append(work)
-                continue
-            self._merge(twin, work)
-            if work.doi and work.doi != twin.doi:
-                twin.notes.append(f"Also registered under DOI {work.doi}" + (f" ({work.year})." if work.year and work.year != twin.year else "."))
+            elif twin.preprint != work.preprint:
+                published, preprint = (work, twin) if twin.preprint else (twin, work)
+                published.notes.append(f"Also posted as a preprint{' on ' + preprint.server if preprint.server else ''}" + (f" (DOI {preprint.doi})." if preprint.doi else "."))
+                published.sources = sorted(set(published.sources) | set(preprint.sources))
+                ranked[ranked.index(twin)] = published
+            else:
+                self._merge(twin, work)
+                if work.doi and work.doi != twin.doi:
+                    twin.notes.append(f"Also registered under DOI {work.doi}" + (f" ({work.year})." if work.year and work.year != twin.year else "."))
+        if scope == "peer-reviewed":
+            ranked = [work for work in ranked if not work.preprint]
+        elif scope == "preprints":
+            ranked = [work for work in ranked if work.preprint]
         return [self._finish(work) for work in ranked[:limit]], status
 
     @staticmethod

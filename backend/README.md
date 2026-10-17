@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `POST /paradigm/check`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, `POST /discovery/snippets`, and `POST /discovery/citations`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `POST /paradigm/check`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, `POST /discovery/snippets`, `POST /discovery/citations`, and `POST /discovery/published-version`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -100,3 +100,18 @@ Each layer gets a status (`coherent`, `tension`, `conflict`, `missing`, `unrecog
 - **Provenance:** pass `document_id` to record each search in the ledger; the Provenance page shows these under "Literature searches".
 
 Source licences and rate limits are listed in `GET /capabilities` under `data_sources`. Test fixtures in `tests/fixtures/open_discovery/` are trimmed copies of real responses (OpenAlex, DOAJ and OpenCitations data are CC0; the Crossref abstract was replaced with placeholder text).
+
+### Preprints (Phase A+)
+
+`preprints.py` adds preprint servers to open discovery. `POST /discovery/papers` takes `"scope": "all" | "peer-reviewed" | "preprints"`.
+
+| Source | Route | Notes |
+| --- | --- | --- |
+| arXiv | Its own API | Metadata CC0. One request every three seconds and one connection at a time, as arXiv's terms require. The published DOI and journal reference are reported by authors and labelled as such. |
+| Europe PMC preprints | `SRC:PPR` search | About 30 life-science servers (bioRxiv, medRxiv, Research Square and others). Licence per record; published versions come from Europe PMC's title and first-author match. |
+| Crossref posted content | `type:posted-content` | ChemRxiv (whose own API sits behind a bot check), SSRN, Research Square and others. Published versions come from the server-registered `is-preprint-of` relation. |
+| AfricArXiv | Zenodo community and Crossref prefix 10.31730 (OSF) | Licence per record; the OSF prefix attribution is inferred. |
+| OpenAlex | `type:preprint` | Preprints already indexed by OpenAlex. |
+| bioRxiv / medRxiv API | `POST /discovery/published-version` | On request, finds the published version of a 10.1101 preprint. |
+
+Every preprint carries `preprint`, a standardised `server` name and, where known, `published_doi`, `published_venue`, `published_url` and `published_source` (how the link was established). When a preprint and its published version both appear, only the published version is listed, with a note. Abstracts are stored only under an open licence (arXiv metadata CC0; CC BY or CC0 for other servers). Preprints scope drops anything not marked as a preprint and peer-reviewed scope drops anything that is. arXiv and Crossref requests run one at a time, and Crossref 429s are retried after a pause.

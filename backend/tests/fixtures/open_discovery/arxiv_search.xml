@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/Nkohy0nSbvnR7VcBmroMIwuVSGw</id>
+  <title>arXiv Query: search_query=all:"malaria transmission" AND all:africa&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-10-17T16:56:21Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22malaria+transmission%22+AND+all:africa&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>7</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/1608.06222v1</id>
+    <title>Modeling the Influence of Local Environmental Factors on Malaria Transmission in Benin and Its Implications for Cohort Study</title>
+    <updated>2016-08-19T16:25:30Z</updated>
+    <link href="https://arxiv.org/abs/1608.06222v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1608.06222v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Malaria remains endemic in tropical areas, especially in Africa. For the evaluation of new tools and to further ourunderstanding of host-parasite interactions, knowing the environmental risk of transmission-even at a very local scale-isessential. The aim of this study was to assess how malaria transmission is influenced and can be predicted by local climaticand environmental factors. As the entomological part of a cohort study of 650 newborn babies in nine villages in the ToriBossito district of Southern Benin between June 2007 and February 2010, human landing catches were performed to assessthe density of malaria vectors and transmission intensity. Climatic factors as well as household characteristics were recordedthroughout the study. Statistical correlations between Anopheles density and environmental and climatic factors weretested using a three-level Poisson mixed regression model. The results showed both temporal variations in vector density(related to season and rainfall), and spatial variations at the level of both village and house. These spatial variations could belargely explained by factors associated with the house's immediate surroundings, namely soil type, vegetation index andthe proximity of a watercourse. Based on these results, a predictive regression model was developed using a leave-one-outmethod, to predict the spatiotemporal variability of malaria transmission in the nine villages. This study points up theimportance of local environmental factors in malaria transmission and describes a model to predict the transmission risk ofindividual children, based on environmental and behavioral characteristics.</summary>
+    <category term="q-bio.PE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2016-08-19T16:25:30Z</published>
+    <arxiv:comment>PLoS ONE, Public Library of Science, 2012</arxiv:comment>
+    <arxiv:primary_category term="q-bio.PE"/>
+    <author>
+      <name>Gilles Cottrell</name>
+      <arxiv:affiliation>UPD5 Pharmacie</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Bienvenue Kouwaye</name>
+      <arxiv:affiliation>SAMM, UAC</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Charlotte Pierrat</name>
+      <arxiv:affiliation>ENEC, MERIT</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Agnès Le Port</name>
+      <arxiv:affiliation>UPD5 Pharmacie, MERIT, UPD5</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Bouraïma Aziz</name>
+      <arxiv:affiliation>MERIT</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Noël Fonton</name>
+      <arxiv:affiliation>UAC, MERIT</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Achille Massougbodji</name>
+      <arxiv:affiliation>UAC, MERIT</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Vincent Corbel</name>
+      <arxiv:affiliation>MIVEGEC, MERIT</arxiv:affiliation>
+    </author>
+    <author>
+      <name>Mahouton Norbert Hounkonnou</name>
+      <arxiv:affiliation>UPD5 Pharmacie, MERIT, UPD5</arxiv:affiliation>
+    </author>
+    <author>
+      <name>André Garcia</name>
+      <arxiv:affiliation>UPD5 Pharmacie, MERIT, UPD5</arxiv:affiliation>
+    </author>
+    <arxiv:doi>10.1371/journal.pone.0028812.g005</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1371/journal.pone.0028812.g005" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1407.7612v4</id>
+    <title>Mapping physiological suitability limits of malaria in Africa under climate change</title>
+    <updated>2015-11-26T22:55:18Z</updated>
+    <link href="https://arxiv.org/abs/1407.7612v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1407.7612v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We mapped current and future temperature suitability for malaria transmission in Africa using a published model that incorporates nonlinear physiological responses to temperature of the mosquito vector Anopheles gambiae and the malaria parasite Plasmodium falciparum. We found that a larger area of Africa currently experiences the ideal temperature for transmission than previously supposed. Under future climate projections, we predicted a modest increase in the overall area suitable for malaria transmission, but a net decrease in the most suitable area. Combined with population density projections, our maps suggest that areas with temperatures suitable for year-round, highest risk transmission will shift from coastal West Africa to the Albertine Rift between Democratic Republic of Congo and Uganda, while areas with seasonal transmission suitability will shift toward sub-Saharan coastal areas. Mapping temperature suitability places important bounds on malaria transmissibility and, along with local level demographic, socioeconomic, and ecological factors, can indicate where resources may be best spent on malaria control.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2014-07-29T01:01:23Z</published>
+    <arxiv:comment>Vector-Borne and Zoonotic Diseases (2015)</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <arxiv:journal_ref>Journal of vector borne and Zoonotic diseases 15(12): 817-725 (2015)</arxiv:journal_ref>
+    <author>
+      <name>Sadie J. Ryan</name>
+    </author>
+    <author>
+      <name>Amy McNally</name>
+    </author>
+    <author>
+      <name>Leah R. Johnson</name>
+    </author>
+    <author>
+      <name>Erin Mordecai</name>
+    </author>
+    <author>
+      <name>Tal Ben-Horin</name>
+    </author>
+    <author>
+      <name>Krijn Paaijmans</name>
+    </author>
+    <author>
+      <name>Kevin D. Lafferty</name>
+    </author>
+    <arxiv:doi>10.1089/vbz.2015.1822</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1089/vbz.2015.1822" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1105.2559v2</id>
+    <title>Biological and Statistical Heterogeneity in Malaria Transmission</title>
+    <updated>2014-01-02T16:01:15Z</updated>
+    <link href="https://arxiv.org/abs/1105.2559v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1105.2559v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In a study of the heterogeneity in malaria infection rates among children Smith et al.1 fitted several mathematical models to data from community studies in Africa. They concluded that 20% of children receive 80% of infections, that infections last about six months on average, that children who clear infections are not immune to new infections, and that the sensitivity and specificity of microscopy for the detection of malaria parasites are 95.8% and 88.4%, respectively. These findings would have important implications for disease control, but we show here that the statistical analysis is unsound and that the data do not support their conclusions.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2011-05-12T15:31:38Z</published>
+    <arxiv:comment>Updated the text to make the connection between the AIC and the likelihood ratio explicit</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Brian G. Williams</name>
+    </author>
+    <author>
+      <name>Christopher Dye</name>
+    </author>
+  </entry>
+</feed>

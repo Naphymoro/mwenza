@@ -1,0 +1,99 @@
+{
+ "hits": {
+  "total": 3,
+  "hits": [
+   {
+    "id": "8416431",
+    "doi": "10.5281/zenodo.8416431",
+    "links": {
+     "self_html": "https://zenodo.org/records/8416431"
+    },
+    "metadata": {
+     "title": "Migration of Health/Social Workers from Zimbabwe to the United Kingdom: Prospects and Challenges",
+     "creators": [
+      {
+       "name": "Chipatiso, Ezra"
+      },
+      {
+       "name": "Nhondo, Benonia Tanatswa"
+      }
+     ],
+     "publication_date": "2023-10-06",
+     "license": {
+      "id": "cc-by-4.0"
+     },
+     "resource_type": {
+      "title": "Preprint",
+      "type": "publication",
+      "subtype": "preprint"
+     },
+     "description": "<p><strong>Abstract: </strong>Recent decades have witnessed the mass movement of social and health workers from Sub-<br> Saharan Africa, particularly Zimbabwe, to the United Kingdom (UK). This study f",
+     "doi": "10.5281/zenodo.8416431"
+    }
+   },
+   {
+    "id": "12663850",
+    "doi": "10.5281/zenodo.12663850",
+    "links": {
+     "self_html": "https://zenodo.org/records/12663850"
+    },
+    "metadata": {
+     "title": "Epidemiologic data relating to age and gender specific HIV viral suppression in Rakai, Uganda, 2013-2019",
+     "creators": [
+      {
+       "name": "Brizzi, Andrea"
+      },
+      {
+       "name": "Kagaayi, Joseph"
+      },
+      {
+       "name": "Ssekubugu, Robert"
+      }
+     ],
+     "publication_date": "2024-07-05",
+     "license": {
+      "id": "cc-by-4.0"
+     },
+     "resource_type": {
+      "title": "Dataset",
+      "type": "dataset"
+     },
+     "description": "<div> <p>This repository contains the data for the analyses presented in the paper \"<span><span>Age and gender profiles of HIV infection burden and viraemia: novel metrics for HIV epidemic control in ",
+     "doi": "10.5281/zenodo.12663850"
+    }
+   },
+   {
+    "id": "3727534",
+    "doi": "10.5281/zenodo.3727534",
+    "links": {
+     "self_html": "https://zenodo.org/records/3727534"
+    },
+    "metadata": {
+     "title": "Multilingual COVID-19 Information Videos",
+     "creators": [
+      {
+       "name": "Bezuidenhout, Louise"
+      },
+      {
+       "name": "McNaughton, Anna"
+      },
+      {
+       "name": "Havemann, Johanna"
+      }
+     ],
+     "publication_date": "2020-03-26",
+     "license": {
+      "id": "cc-by-4.0"
+     },
+     "resource_type": {
+      "title": "Proposal",
+      "type": "publication",
+      "subtype": "proposal"
+     },
+     "description": "<p>We propose to address a lack of CODIV-19 information in local languages with short, consistent messages provided in as many regional/local languages as possible. For that, we need help of researche",
+     "doi": "10.5281/zenodo.3727534"
+    }
+   }
+  ]
+ }
+}

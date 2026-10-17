@@ -1,0 +1,177 @@
+{
+ "hitCount": 4,
+ "resultList": {
+  "result": [
+   {
+    "id": "PPR1285770",
+    "source": "PPR",
+    "title": "Prevalence and determinants of Skilled Birth Attendance Among Women Who Delivered in the Past 12 Months in Sene East District, Ghana: A Community-Based Cross-Sectional Study",
+    "authorString": "Akesem MA, Ankomah D, Appiah JK, Nlamba EW, Dorgbetor CI.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Akesem MA",
+       "lastName": "Akesem",
+       "firstName": "Maxwell Adjiabadek",
+       "initials": "MA",
+       "authorId": {
+        "type": "ORCID",
+        "value": "0000-0002-9049-9460"
+       }
+      },
+      {
+       "fullName": "Ankomah D",
+       "lastName": "Ankomah",
+       "firstName": "Daniel",
+       "initials": "D"
+      },
+      {
+       "fullName": "Appiah JK",
+       "lastName": "Appiah",
+       "firstName": "Joseph Kubi",
+       "initials": "JK"
+      }
+     ]
+    },
+    "pubYear": "2026",
+    "doi": "10.64898/2026.07.22.26358729",
+    "bookOrReportDetails": {
+     "publisher": "medRxiv",
+     "yearOfPublication": 2026
+    },
+    "license": "cc by",
+    "abstractText": "<h4>ABSTRACT</h4>  <h4>Background</h4>  Skilled birth attendance is essential to reduce maternal and neonatal mortality. However, the use of skilled delivery services is still low in many rural areas ",
+    "isOpenAccess": "N",
+    "citedByCount": 0
+   },
+   {
+    "id": "PPR1328509",
+    "source": "PPR",
+    "title": "Individual-Level and Community-Level Determinants of Skilled Birth Attendance in Nigeria: A Multilevel Analysis of DHS Data",
+    "authorString": "Omokanye\u00b9 SA, Edet\u00b2 CK, Wegbom\u00b2 AI, Ayilegbe KB.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Omokanye\u00b9 SA",
+       "lastName": "Omokanye\u00b9",
+       "firstName": "Sunday Akingbola",
+       "initials": "SA"
+      },
+      {
+       "fullName": "Edet\u00b2 CK",
+       "lastName": "Edet\u00b2",
+       "firstName": "Clement Kevin",
+       "initials": "CK"
+      },
+      {
+       "fullName": "Wegbom\u00b2 AI",
+       "lastName": "Wegbom\u00b2",
+       "firstName": "Anthony Ike",
+       "initials": "AI"
+      }
+     ]
+    },
+    "pubYear": "2026",
+    "doi": "10.21203/rs.3.rs-10821284/v1",
+    "bookOrReportDetails": {
+     "publisher": "Research Square",
+     "yearOfPublication": 2026
+    },
+    "abstractText": "<title>Abstract</title>  <p>Background  Skilled birth attendance (SBA), the presence of a doctor, nurse, or midwife at delivery, is one of the most effective interventions for reducing maternal and ne",
+    "isOpenAccess": "N",
+    "citedByCount": 0
+   },
+   {
+    "id": "PPR1331583",
+    "source": "PPR",
+    "title": "Health Insurance and Maternal Healthcare Utilisation in Nepal: Evidence from the Nepal Demographic and Health Survey 2022",
+    "authorString": "Lamsal YR, Hussen AM, Browne JL, Sagtani RA.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Lamsal YR",
+       "lastName": "Lamsal",
+       "firstName": "Yash Raj",
+       "initials": "YR"
+      },
+      {
+       "fullName": "Hussen AM",
+       "lastName": "Hussen",
+       "firstName": "Abdulaziz Mohammed",
+       "initials": "AM"
+      },
+      {
+       "fullName": "Browne JL",
+       "lastName": "Browne",
+       "firstName": "Joyce",
+       "initials": "JL"
+      }
+     ]
+    },
+    "pubYear": "2026",
+    "doi": "10.64898/2026.09.29.26364291",
+    "bookOrReportDetails": {
+     "publisher": "medRxiv",
+     "yearOfPublication": 2026
+    },
+    "abstractText": "<h4>Background</h4>  Access to maternal healthcare services is essential for improving maternal and neonatal health outcomes. Health insurance can reduce financial barriers to healthcare access and ma",
+    "isOpenAccess": "N",
+    "citedByCount": 0
+   },
+   {
+    "id": "PPR1308905",
+    "source": "PPR",
+    "title": "Access to malaria diagnosis and treatment in Zambia in the context of scaling-up community case management: results from repeated national cross-sectional surveys",
+    "authorString": "Mao Z, Bennett A, Silumbe K, Miller J, Millar J, Slater H, Yukich J, Ashton RA, Kyomuhangi I, Andrada A, Karabo R, Eisele TP.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Mao Z",
+       "lastName": "Mao",
+       "firstName": "Zhiyuan",
+       "initials": "Z",
+       "authorId": {
+        "type": "ORCID",
+        "value": "0000-0002-3999-0705"
+       }
+      },
+      {
+       "fullName": "Bennett A",
+       "lastName": "Bennett",
+       "firstName": "Adam",
+       "initials": "A"
+      },
+      {
+       "fullName": "Silumbe K",
+       "lastName": "Silumbe",
+       "firstName": "Kafula",
+       "initials": "K"
+      }
+     ]
+    },
+    "pubYear": "2026",
+    "doi": "10.64898/2026.08.25.26361362",
+    "bookOrReportDetails": {
+     "publisher": "medRxiv",
+     "yearOfPublication": 2026
+    },
+    "license": "cc by-nc-nd",
+    "abstractText": "<h4>Background</h4>  Community case management has been scaled up nationally in Zambia over the last decade. However, there is limited evidence on how this nationwide implementation has affected febri",
+    "isOpenAccess": "N",
+    "citedByCount": 0,
+    "commentCorrectionList": {
+     "commentCorrection": [
+      {
+       "source": "MED",
+       "id": "42709691",
+       "reference": "PLOS global public health. \n    2026 ;6(9):e0007216",
+       "type": "Preprint of",
+       "note": "Link created based on a title-first author match",
+       "orderIn": 10001
+      }
+     ]
+    }
+   }
+  ]
+ }
+}
