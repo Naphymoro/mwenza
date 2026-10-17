@@ -428,7 +428,7 @@ class GoldenThreadChecker:
         if not design.gap:
             return
         if evidence is None:
-            self._issue(report, "gap-evidence", "info", ("gap",), "No sources are in scope, so the gap was not checked against literature.")
+            self._issue(report, "gap-evidence", "info", ("gap",), "No sources ingested by the engine were selected, so the gap was not checked against literature.")
             return
         answer = evidence(design.gap)
         if answer.abstained:

@@ -111,5 +111,9 @@ def test_api_endpoint_and_agent_wiring():
     body = response.json()
     assert body["status"] == "needs-revision"
     assert any(issue["check"] == "paradigm-approach" for issue in body["issues"])
+    preflight = client.options("/golden-thread/check", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"})
+    assert preflight.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    foreign = client.options("/golden-thread/check", headers={"Origin": "https://example.org", "Access-Control-Request-Method": "POST"})
+    assert "access-control-allow-origin" not in foreign.headers
     methodologist = next(agent for agent in client.get("/agents").json()["agents"] if agent["id"] == "methodologist")
     assert "check_alignment" in methodologist["tools"]

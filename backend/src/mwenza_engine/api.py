@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .golden_thread import ResearchDesign
@@ -12,6 +14,9 @@ from .model_gateway import ModelGateway
 from .tools import tool_catalogue
 
 app = FastAPI(title="Mwenza Evidence Engine", version="0.1.0")
+# The browser workspace is served separately during development, so allow
+# local origins by default; deployments set MWENZA_CORS_ORIGIN_REGEX.
+app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("MWENZA_CORS_ORIGIN_REGEX", r"https?://(localhost|127\.0\.0\.1)(:\d+)?"), allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 engine = NotebookEngine()
 model_gateway = ModelGateway()
 
