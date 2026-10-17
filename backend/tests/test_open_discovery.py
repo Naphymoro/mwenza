@@ -37,6 +37,10 @@ class FakeOpenApis:
             return httpx.Response(200, json=fixture({"europepmc": "europepmc_preprints.json", "zenodo": "zenodo_africarxiv.json", "biorxiv": "biorxiv_pubs.json"}[name]))
         if name == "crossref" and "type:posted-content" in request.url.params.get("filter", "") and "type:journal-article" not in request.url.params.get("filter", ""):
             return httpx.Response(200, json=fixture("crossref_africarxiv.json" if "prefix:10.31730" in request.url.params["filter"] else "crossref_preprints.json"))
+        if name == "openalex" and request.url.path.startswith("/works/doi:"):
+            wanted = request.url.path.split("/works/doi:", 1)[1].lower()
+            match = next((item for item in fixture("openalex_search.json")["results"] if normalise_doi(item.get("doi")) == wanted), None)
+            return httpx.Response(200, json=match) if match else httpx.Response(404, json={"error": "not found"})
         if name == "openalex" and "doi:" in request.url.params.get("filter", ""):
             return httpx.Response(200, json={"results": [dict(fixture("openalex_search.json")["results"][0], doi="https://doi.org/10.1186/s12884-025-07164-4", display_name="A citing paper about facility delivery")]})
         body = {"openalex": "openalex_search.json", "crossref": "crossref_search.json", "doaj": "doaj_search.json", "opencitations": "opencitations_citations.json"}[name]

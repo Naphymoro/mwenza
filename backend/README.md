@@ -115,3 +115,37 @@ Source licences and rate limits are listed in `GET /capabilities` under `data_so
 | bioRxiv / medRxiv API | `POST /discovery/published-version` | On request, finds the published version of a 10.1101 preprint. |
 
 Every preprint carries `preprint`, a standardised `server` name and, where known, `published_doi`, `published_venue`, `published_url` and `published_source` (how the link was established). When a preprint and its published version both appear, only the published version is listed, with a note. Abstracts are stored only under an open licence (arXiv metadata CC0; CC BY or CC0 for other servers). Preprints scope drops anything not marked as a preprint and peer-reviewed scope drops anything that is. arXiv and Crossref requests run one at a time, and Crossref 429s are retried after a pause.
+
+## MCP server
+
+`mcp_server.py` exposes Mwenza to any MCP client (Claude Code, Claude Desktop, other agents) through the official MCP Python SDK. Install it with the `mcp` extra:
+
+```bash
+python -m pip install -e '.[mcp]'
+```
+
+| Tool | What it does | Network |
+| --- | --- | --- |
+| `search_literature` | Open discovery across OpenAlex, Crossref, DOAJ and the preprint servers; `scope` is `all`, `peer-reviewed` or `preprints` | yes |
+| `lookup_doi` | One record by DOI (OpenAlex, then Crossref) | yes |
+| `get_citations` | Citing works or references from OpenCitations | yes |
+| `check_published_version` | Published version of a bioRxiv/medRxiv preprint | yes |
+| `check_golden_thread` | The golden thread check on a research design | no |
+| `check_paradigm_fit` | The paradigm–method check | no |
+| `audit_citations` | The citation audit, with the cited sources passed inline | no |
+
+All tools are read-only. Results are compact records carrying licence, preprint, retraction and published-version fields, and the server's instructions tell agents how to use them (cite preprints as not peer reviewed, never use retracted work as evidence, store abstracts only when `abstract_storable` is true). The resource `mwenza://data-sources` lists each source's licence and rate limit.
+
+**Claude Code** (stdio, run from this `backend` folder after installing):
+
+```bash
+claude mcp add mwenza -e MWENZA_OPENALEX_KEY=your-key -- mwenza-mcp
+```
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{"mcpServers": {"mwenza": {"command": "mwenza-mcp", "env": {"MWENZA_OPENALEX_KEY": "your-key", "MWENZA_CONTACT_EMAIL": "library@your-institution.example"}}}}
+```
+
+**HTTP** for other agents: `mwenza-mcp --transport http --port 8766` serves `http://127.0.0.1:8766/mcp`. It binds to localhost and has no authentication, so put it behind an authenticating proxy before exposing it beyond the machine. Request URLs are not logged, because the OpenAlex key travels in them.

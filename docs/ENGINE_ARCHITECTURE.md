@@ -64,3 +64,7 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## Open discovery (Phase A)
 
 `open_discovery.py` implements Phase A of `docs/analysis/DISCOVERY_ENGINE_DESIGN.md`: federated search over OpenAlex, Crossref and DOAJ with citation lookup through OpenCitations. Each adapter maps its API's records to one `OpenWork` shape, and the merge step keeps the most reusable abstract, so licence decisions are made once, in the engine, rather than in the browser. The source registry (`SOURCE_REGISTRY`) is the capability registry's record of each source's licence, attribution and rate limit. Phases B (local index) and C (licensed full text and passage search) build on the same `OpenWork` records.
+
+## MCP server
+
+`mcp_server.py` wraps open discovery and the three methodology checks as MCP tools using the official Python SDK (an optional dependency). Network-bound tools run in worker threads so one slow search does not block other sessions, discovery errors become MCP tool errors with their message, and responses use a compact record shape so agents receive licence, preprint and retraction information without internal fields. The server is tested in memory with the SDK's client and end to end over stdio and streamable HTTP, including with Mwenza's own MCP client in `discovery.py`.

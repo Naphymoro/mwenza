@@ -15,8 +15,12 @@ dependencies = [
 [project.optional-dependencies]
 ocr = ["pytesseract>=0.3.13", "Pillow>=10.4"]
 vectors = ["sentence-transformers>=3.0"]
+mcp = ["mcp>=2.3,<3"]
 dev = ["pytest>=8.3"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[project.scripts]
+mwenza-mcp = "mwenza_engine.mcp_server:main"

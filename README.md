@@ -48,6 +48,10 @@ The **Find literature** page searches open scholarly records from OpenAlex, Cros
 
 Where an engine also enables Ai2's Asta (`MWENZA_ASTA=on` with an `ASTA_API_KEY`), the page offers it as a second provider with passage search. The Asta licence allows academic, non-commercial research use only and requires publications to acknowledge Ai2.
 
+## MCP server
+
+Mwenza's literature search and methodology checks are also available as an MCP server, so Claude Code, Claude Desktop and other agents can use them under the same licence and citation rules. See `backend/README.md` for installation and configuration.
+
 ## Product direction
 
 Mwenza should preserve the central NotebookLM-like contract: users select a bounded source set, answers cite that set, and missing evidence is surfaced instead of invented. Planned production layers are an ingestion worker, document extraction/chunking, vector or hybrid retrieval, model gateway, artifact jobs, object storage, and notebook sharing permissions. The backend now exposes `/agents`, `/agents/runs`, `/agents/run`, `/capabilities`, and `/graph`; these are deterministic today and form the adapter boundary for model providers, queues, and sandboxed research execution.
