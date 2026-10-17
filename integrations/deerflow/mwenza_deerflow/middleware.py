@@ -11,6 +11,11 @@ inside the model request and is never saved as a visible message. If the revisio
 rule, the reply is sent with labels (unverified, retracted, annotated example) rather than silently.
 The review is attached to the message as ``additional_kwargs["mwenza_constitution"]``.
 
+Evidence is recorded when a Mwenza tool returns, before DeerFlow's ToolOutputBudgetMiddleware (which sits outside
+this one) moves a large result to a file and leaves a preview: the raw result's works, DOIs and links are stored as
+``additional_kwargs["mwenza_evidence"]`` on the tool message. That record is saved with the thread, never sent to the
+model, and cannot be changed from the sandbox.
+
 The checks live in ``constitution.py``, a vendored copy of ``mwenza_engine/constitution.py``.
 """
 
@@ -23,11 +28,14 @@ from typing import Any
 from langchain.agents.middleware import AgentMiddleware
 from langchain.agents.middleware.types import ModelCallResult, ModelRequest, ModelResponse, hook_config
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, ToolMessage
+from langgraph.prebuilt.tool_node import ToolCallRequest
+from langgraph.types import Command
 
 from .constitution import DRAFT_WORDS, Evidence, correction_prompt, remediate, review_reply
 
 MWENZA_TOOLS = ("search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "navigate_methodology", "audit_citations")
 CORRECTION_NAME = "mwenza_constitution"
+EVIDENCE_KEY = "mwenza_evidence"
 
 
 def text_of(content: Any) -> str:
@@ -94,9 +102,29 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
         return any(isinstance(message, ToolMessage) and self._matches(message.name, self.mwenza_tools) for message in messages)
 
     def _evidence(self, messages: list[Any]) -> Evidence:
-        tool_outputs = [text_of(message.content) for message in messages if isinstance(message, ToolMessage) and self._matches(message.name, self.trusted_tools)]
         provided = [text_of(message.content) for message in messages if isinstance(message, HumanMessage) and not (message.additional_kwargs or {}).get("hide_from_ui") and message.name != CORRECTION_NAME]
-        return Evidence.collect(tool_outputs, provided)
+        evidence = Evidence.collect((), provided)
+        for message in messages:
+            if isinstance(message, ToolMessage) and self._matches(message.name, self.trusted_tools):
+                record = (message.additional_kwargs or {}).get(EVIDENCE_KEY)
+                if isinstance(record, dict):
+                    evidence.merge(record)
+                else:
+                    evidence.add_text(text_of(message.content), "tool")  # recorded before this middleware existed
+        return evidence
+
+    def _record(self, result: Any) -> Any:
+        if not isinstance(result, ToolMessage) or result.status == "error" or not self._matches(result.name, self.trusted_tools):
+            return result
+        extra = dict(result.additional_kwargs or {})
+        extra[EVIDENCE_KEY] = Evidence.collect([text_of(result.content)]).to_dict()
+        return result.model_copy(update={"additional_kwargs": extra})
+
+    def wrap_tool_call(self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], ToolMessage | Command]) -> ToolMessage | Command:
+        return self._record(handler(request))
+
+    async def awrap_tool_call(self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]]) -> ToolMessage | Command:
+        return self._record(await handler(request))
 
     @hook_config(can_jump_to=["model"])
     def after_model(self, state: Any, runtime: Any) -> dict[str, Any] | None:

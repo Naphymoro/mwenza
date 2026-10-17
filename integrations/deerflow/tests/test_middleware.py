@@ -104,3 +104,21 @@ def test_evidence_is_read_from_mcp_content_blocks():
     messages, seen = run([GROUNDED], tools=(lookup_doi,), first_tool="lookup_doi")
     assert isinstance(messages[-2].content, list)
     assert messages[-1].content == GROUNDED and len(seen) == 2
+
+
+def test_evidence_survives_when_a_later_middleware_truncates_the_result():
+    """DeerFlow's output budget replaces large results with a preview; the evidence record must outlive that."""
+    from langchain.agents.middleware import AgentMiddleware
+
+    class Truncate(AgentMiddleware):
+        def wrap_tool_call(self, request, handler):
+            result = handler(request)
+            return result.model_copy(update={"content": "[preview only: full output saved to /mnt/user-data/outputs/.tool-results/search_literature-abc.txt]"})
+
+    model = ScriptedModel(messages=iter([call("search_literature", {"query": "distance"}), AIMessage(content=GROUNDED)]))
+    model.seen = []
+    agent = create_agent(model=model, tools=[search_literature], middleware=[Truncate(), MwenzaConstitutionMiddleware()])
+    state = agent.invoke({"messages": [HumanMessage(content="[SYNTHETIC STUDENT] Readings?")]}, context={"agent_name": "mwenza", "thread_id": "t2", "run_id": "r1"})
+    tool_message = state["messages"][2]
+    assert "preview only" in tool_message.content and tool_message.additional_kwargs["mwenza_evidence"]["dois"] == ["10.5555/synthetic.0001"]
+    assert state["messages"][-1].content == GROUNDED and len(model.seen) == 2

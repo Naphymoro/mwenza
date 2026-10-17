@@ -114,6 +114,14 @@ def test_correction_prompt_names_each_issue_and_carries_the_draft():
     assert "unverified-doi" in prompt and "<draft>\nSee 10.5555/invented.9999.\n</draft>" in prompt
 
 
+def test_evidence_round_trips_through_a_stored_record():
+    stored = json.loads(json.dumps(evidence().to_dict()))
+    restored = Evidence()
+    restored.merge(stored)
+    assert review_reply("Otieno and Mwangi (2021) found this (10.5555/synthetic.0001).", restored).status == "pass"
+    assert [finding.kind for finding in review_reply("Asante (2019) showed it (10.5555/synthetic.0002).", restored).findings] == ["retracted", "retracted"]
+
+
 def test_module_is_standard_library_only_so_deerflow_can_vendor_it():
     source = Path(__file__).parents[1] / "src" / "mwenza_engine" / "constitution.py"
     tree = ast.parse(source.read_text(encoding="utf-8"))

@@ -173,6 +173,27 @@ class Evidence:
     def knows_author_year(self, author: str, year: int) -> bool:
         return (author.lower(), year) in self.author_years
 
+    def to_dict(self) -> dict[str, Any]:
+        """A compact, JSON-safe record of what this evidence vouches for, to store beside a tool result."""
+        return {
+            "works": [asdict(work) for work in self.works],
+            "dois": sorted(self.dois),
+            "urls": sorted(self.urls),
+            "author_years": sorted([author, year] for author, year in self.author_years),
+        }
+
+    def merge(self, data: dict[str, Any]) -> None:
+        """Add a record made by ``to_dict``."""
+        for item in data.get("works") or []:
+            work = Work(**{**item, "surnames": tuple(item.get("surnames") or ())})
+            self.works.append(work)
+            if work.doi:
+                self.dois[work.doi] = work
+        for doi in data.get("dois") or []:
+            self.dois.setdefault(doi, Work(doi=doi))
+        self.urls.update(data.get("urls") or [])
+        self.author_years.update((str(author), int(year)) for author, year in data.get("author_years") or [])
+
 
 def cited_author_years(text: str) -> list[tuple[str, int]]:
     return [(author, year) for author, year, _start, _end in _author_year_spans(text)]
