@@ -38,6 +38,10 @@ The **Citation audit** page checks a pasted draft against the sources selected i
 
 The **Provenance** page shows a tamper-evident record for the citation audit draft and the golden thread design: where each paragraph came from (typed, pasted, or present when tracking began), what Mwenza flagged, what was revised afterwards, and any unquoted text copied from a source. It produces an AI-use declaration to download for a supervisor or ethics form. Set `MWENZA_LEDGER_PATH` when starting the engine to keep the ledger between restarts.
 
+## Find literature
+
+The **Find literature** page searches published papers or passages through Ai2's Asta Scientific Corpus Tool and adds the abstracts or passages you choose to the notebook, ready for the citation audit and golden thread gap check. It is off until the engine is started with `MWENZA_ASTA=on` and an `ASTA_API_KEY`; the Asta licence allows academic, non-commercial research use only and requires publications to acknowledge Ai2.
+
 ## Product direction
 
 Mwenza should preserve the central NotebookLM-like contract: users select a bounded source set, answers cite that set, and missing evidence is surfaced instead of invented. Planned production layers are an ingestion worker, document extraction/chunking, vector or hybrid retrieval, model gateway, artifact jobs, object storage, and notebook sharing permissions. The backend now exposes `/agents`, `/agents/runs`, `/agents/run`, `/capabilities`, and `/graph`; these are deterministic today and form the adapter boundary for model providers, queues, and sandboxed research execution.

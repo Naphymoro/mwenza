@@ -52,3 +52,7 @@ The methodology layer treats a thesis as a typed research-design graph rather th
 ## Provenance Ledger
 
 `provenance.py` keeps an append-only log of `LedgerEvent`s. Each event's hash covers its fields and the previous event's hash, and snapshot text is bound by a SHA-256 `content_hash`, so `verify` detects edits to a saved ledger. Attribution follows each paragraph of the latest snapshot back through earlier snapshots by text similarity, then combines browser paste reports, the flags of checks tied to each snapshot, and verbatim six-word shingle matches against sources in scope. The Reproducer agent holds the `inspect_provenance` tool. The ledger has no user identity yet; binding events to authenticated accounts and signing the chain head are required before it can serve as institutional evidence.
+
+## Literature discovery
+
+`discovery.py` is the first external connector. It keeps the evidence contract: search results are returned for inspection, and only user-selected abstracts or passages become notebook sources, each carrying a citation header, its URL and the retrieval date. The Scout agent holds the `search_literature` tool, which is marked medium risk and approval-required, matching the rule that external discovery stays a separate, permissioned capability. The connector is disabled unless a deployment opts in, because the Asta corpus licence restricts use to academic, non-commercial research.

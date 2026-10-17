@@ -8,6 +8,7 @@ from fastapi import FastAPI, File, HTTPException, Path as PathParam, Query, Uplo
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from .discovery import DiscoveryError, LiteratureDiscovery, serialise
 from .golden_thread import ResearchDesign
 from .pipeline import NotebookEngine
 from .model_gateway import ModelGateway
@@ -20,6 +21,7 @@ app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("MWENZA_COR
 engine = NotebookEngine(os.environ.get("MWENZA_LEDGER_PATH"))
 DOCUMENT_ID = r"^[\w.-]{1,120}$"
 model_gateway = ModelGateway()
+discovery = LiteratureDiscovery()
 
 
 class QueryRequest(BaseModel):
@@ -40,6 +42,13 @@ class WorkflowRunRequest(BaseModel):
 
 
 Items = list[str]
+
+
+class DiscoveryRequest(BaseModel):
+    query: str = Field(min_length=3, max_length=500)
+    limit: int = Field(default=10, ge=1, le=25)
+    year_from: int | None = Field(default=None, ge=1800, le=2100)
+    year_to: int | None = Field(default=None, ge=1800, le=2100)
 
 
 class ProvenanceFields(BaseModel):
@@ -172,3 +181,26 @@ def audit_citations(request: CitationAuditRequest) -> dict[str, object]:
 @app.get("/provenance/{document_id}")
 def provenance(document_id: str = PathParam(pattern=DOCUMENT_ID), source_ids: list[str] | None = Query(default=None)) -> dict[str, object]:
     return engine.provenance_report(document_id, set(source_ids) if source_ids else None)
+
+
+@app.get("/discovery/status")
+def discovery_status() -> dict[str, object]:
+    return discovery.status()
+
+
+def _discover(search) -> dict[str, object]:
+    try:
+        results = search()
+    except DiscoveryError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    return {"results": serialise(results), "attribution": discovery.status()["attribution"]}
+
+
+@app.post("/discovery/papers")
+def discover_papers(request: DiscoveryRequest) -> dict[str, object]:
+    return _discover(lambda: discovery.search_papers(request.query, request.limit, request.year_from, request.year_to))
+
+
+@app.post("/discovery/snippets")
+def discover_snippets(request: DiscoveryRequest) -> dict[str, object]:
+    return _discover(lambda: discovery.search_snippets(request.query, request.limit))

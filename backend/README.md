@@ -21,7 +21,7 @@ python -m pip install -e '.[dev,ocr]'
 uvicorn mwenza_engine.api:app --app-dir src --reload
 ```
 
-Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, and `GET /provenance/{document_id}`.
+Endpoints: `GET /health`, `GET /sources`, `POST /sources/upload`, `POST /query`, `GET /agents`, `GET /agents/runs`, `POST /agents/run`, `POST /workflows/run`, `GET /capabilities`, `GET /graph`, `POST /sources/text`, `POST /golden-thread/check`, `POST /citations/audit`, `GET /provenance/{document_id}`, `GET /discovery/status`, `POST /discovery/papers`, and `POST /discovery/snippets`.
 
 The model gateway is provider-neutral and offline by default. Set
 `MWENZA_MODEL_PROVIDER` and `MWENZA_MODEL_NAME` to advertise a configured
@@ -66,3 +66,17 @@ When `/golden-thread/check` or `/citations/audit` is called with a `document_id`
 - **Paragraph attribution** for the latest version: typed in Mwenza, pasted (origin not recorded), partly pasted, or present when tracking began; the feedback Mwenza raised on it, whether it was revised afterwards, and whether issues remain open in the latest check.
 - **Verbatim matches:** runs of 10 or more words identical to a source in scope, marked quoted or unquoted.
 - **Declaration:** a Markdown AI-use statement built only from recorded facts, with its limits stated.
+
+## Literature discovery (Ai2 Asta)
+
+The engine can search published literature through Ai2's [Asta Scientific Corpus Tool](https://allenai.org/asta/resources/mcp), an MCP server over the Semantic Scholar corpus. `discovery.py` contains a small streamable-HTTP MCP client (JSON-RPC over POST, server-sent events, session ids) and normalises `search_papers_by_relevance` and `snippet_search` results.
+
+It is **off by default**. The [Asta licence](https://allenai.org/asta-corpus-license) permits academic and non-commercial research only, forbids sharing the key outside your organisation's authorised staff, and requires publications that use the tool to acknowledge Ai2. Each deployment enables it with its own key:
+
+```bash
+MWENZA_ASTA=on ASTA_API_KEY=your-key uvicorn mwenza_engine.api:app --app-dir src
+```
+
+`MWENZA_ASTA_URL` and `MWENZA_ASTA_TIMEOUT` (seconds, default 60) override the endpoint and timeout. Without a key, Asta accepts connections but tool calls can take minutes. Nothing is added to a notebook automatically: the browser adds an abstract or passage only when the user chooses it.
+
+OpenScholar is not connected. It has no hosted API: its [repository](https://github.com/AkariAsai/OpenScholar) provides a command-line pipeline whose local index needs very large memory, and its retriever endpoint is announced as planned. The connector boundary is ready for it once that endpoint exists.

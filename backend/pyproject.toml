@@ -9,12 +9,13 @@ dependencies = [
   "python-multipart>=0.0.9",
   "pymupdf>=1.24",
   "pydantic>=2.8",
+  "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 ocr = ["pytesseract>=0.3.13", "Pillow>=10.4"]
 vectors = ["sentence-transformers>=3.0"]
-dev = ["pytest>=8.3", "httpx>=0.27"]
+dev = ["pytest>=8.3"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
