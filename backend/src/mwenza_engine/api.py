@@ -329,6 +329,24 @@ def agent_status() -> dict[str, object]:
     return research_agent.status() if research_agent else {"enabled": False}
 
 
+def chat_document(thread_id: str) -> str:
+    """The provenance ledger's document for a research chat."""
+    return f"chat-{thread_id}"
+
+
+def record_run(thread_id: str, run: dict[str, object]) -> dict[str, object]:
+    """Record a sandbox run of a research chat in the provenance ledger; returns the run with its ledger entry."""
+    if run["kind"] == "rerun":
+        outcome = "same outputs" if run.get("agree") else "outputs differ"
+        summary = f"Re-ran analysis {run['capsule_id']} in the research sandbox: {outcome}"
+    else:
+        status = "timed out" if run.get("timed_out") else f"exit code {run.get('exit_code')}"
+        inputs = run.get("inputs") or []
+        summary = f"Ran a {run.get('language')} analysis in the research sandbox on {len(inputs)} input file{'' if len(inputs) == 1 else 's'} (capsule {run['capsule_id']}, {status})"
+    event = engine.ledger.append(chat_document(thread_id), "analysis-rerun" if run["kind"] == "rerun" else "analysis-run", "sandbox", summary, dict(run))
+    return {**run, "ledger": {"document_id": event.document_id, "seq": event.seq, "hash": event.hash}}
+
+
 @app.post("/agent/chat")
 async def agent_chat(request: AgentChatRequest) -> StreamingResponse:
     """One student turn with the research agent, as Server-Sent Events: thread, step, notice, reply, error."""
@@ -337,8 +355,13 @@ async def agent_chat(request: AgentChatRequest) -> StreamingResponse:
     agent = research_agent
 
     async def events():
+        thread_id = request.thread_id
         async for event in agent.chat(request.message, request.thread_id, request.private, [item.model_dump() for item in request.files]):
             name = event.pop("event")
+            if name == "thread":
+                thread_id = event["thread_id"]
+            elif name == "reply" and thread_id and event.get("runs"):
+                event["runs"] = [record_run(thread_id, run) for run in event["runs"]]
             yield f"event: {name}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})

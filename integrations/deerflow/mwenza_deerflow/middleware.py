@@ -21,6 +21,7 @@ The checks live in ``constitution.py``, a vendored copy of ``mwenza_engine/const
 
 from __future__ import annotations
 
+import re
 import threading
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -54,8 +55,16 @@ WRITING_REFUSAL = "Mwenza does not write files or run commands for students. Giv
 # Running code is a human checkpoint: run_analysis carries the student's approval, which must be their own words.
 APPROVAL_TOOLS = ("run_analysis",)
 APPROVAL_REFUSAL = "Not run: the approval must be the student's own words, quoted from their latest message. Show them what the analysis will do (data, method, outputs), ask whether to run it, and pass their reply as approval."
+# The Reproducer checks figures the student reported. A figure the model made up and passed in as the student's
+# own is refused, so a check can never vouch for invented results (Qwen3 did this on a data upload).
+STUDENT_FIGURE_TOOLS = ("check_reported_statistics", "check_sample_size")
+CONVENTIONAL = {"alpha": (0.05, 0.01, 0.1), "power": (0.8, 0.9, 0.95), "confidence": (0.9, 0.95, 0.99)}
+FIGURE = re.compile(r"(?<![\w.])[-−]?(\d*\.?\d+)(\s?%)?")
+UPLOADS = "/mnt/user-data/uploads/"
+FIGURE_REFUSAL = "Not checked: {figures} did not come from the student's messages or files. Check only figures the student reported, and ask them for any that are missing; never fill them in yourself. To get results from their data, propose an analysis (run_analysis) and ask for their approval."
 CORRECTION_NAME = "mwenza_constitution"
 EVIDENCE_KEY = "mwenza_evidence"
+CUT_NOTICE = "\n\n(My answer was cut short here. Say 'continue' and I'll finish it.)"
 
 
 def text_of(content: Any) -> str:
@@ -88,6 +97,11 @@ def is_final_reply(message: AIMessage) -> bool:
     if extra.get("tool_calls") or extra.get("function_call") or extra.get("deerflow_error_fallback") or extra.get("model_length_termination"):
         return False
     return (message.response_metadata or {}).get("finish_reason") not in {"tool_calls", "function_call"}
+
+
+def was_cut(message: AIMessage) -> bool:
+    """The model hit its output limit. DeerFlow keeps the partial text but does not tell the student."""
+    return (message.response_metadata or {}).get("finish_reason") == "length"
 
 
 class MwenzaConstitutionMiddleware(AgentMiddleware):
@@ -151,6 +165,34 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
         latest = next((message for message in reversed(state.get("messages") or []) if isinstance(message, HumanMessage) and not (message.additional_kwargs or {}).get("hide_from_ui") and message.name != CORRECTION_NAME), None)
         return len(approval) >= 2 and latest is not None and approval in self._normalise(text_of(latest.content))
 
+    @staticmethod
+    def _student_figures(messages: list[Any]) -> set[float]:
+        """Every number in the student's own messages and in the files they uploaded that the agent read."""
+        upload_calls = {call.get("id") for message in messages if isinstance(message, AIMessage) for call in message.tool_calls or [] if str((call.get("args") or {}).get("path", "")).startswith(UPLOADS)}
+        texts = [text_of(message.content) for message in messages if isinstance(message, HumanMessage) and not (message.additional_kwargs or {}).get("hide_from_ui") and message.name != CORRECTION_NAME]
+        texts += [text_of(message.content) for message in messages if isinstance(message, ToolMessage) and message.tool_call_id in upload_calls]
+        figures: set[float] = set()
+        for match in FIGURE.finditer("\n".join(texts)):
+            value = float(match.group(1))
+            figures |= {value, value / 100} if match.group(2) else {value}
+        return figures
+
+    def _unsourced_figures(self, request: ToolCallRequest) -> list[str]:
+        call = request.tool_call
+        args = call.get("args") or {}
+        if self._matches(call.get("name"), ("check_reported_statistics",)) and args.get("wording") == "researcher's own words":
+            claimed = [(match.group(0).strip(), float(match.group(1)) / (100 if match.group(2) else 1)) for match in FIGURE.finditer(str(args.get("text", "")))]
+        elif self._matches(call.get("name"), ("check_sample_size",)):
+            parameters = args.get("parameters") if isinstance(args.get("parameters"), dict) else {}
+            claimed = [(f"{key} = {value}", float(value)) for key, value in parameters.items() if isinstance(value, (int, float)) and not isinstance(value, bool) and value not in CONVENTIONAL.get(key, ())]
+            if isinstance(args.get("reported_n"), int):
+                claimed.append((f"n = {args['reported_n']}", float(args["reported_n"])))
+        else:
+            return []
+        state = request.state if isinstance(request.state, dict) else {"messages": getattr(request.state, "messages", [])}
+        known = self._student_figures(state.get("messages") or [])
+        return list(dict.fromkeys(label for label, value in claimed if not any(abs(value - figure) <= 1e-9 for figure in known)))
+
     def _refuse_writing(self, request: ToolCallRequest) -> ToolMessage | None:
         call = request.tool_call
         context = getattr(request.runtime, "context", None) or {}
@@ -158,6 +200,9 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
             return ToolMessage(content=WRITING_REFUSAL, name=call.get("name"), tool_call_id=call.get("id") or "", status="error")
         if self._matches(call.get("name"), APPROVAL_TOOLS) and not self._approved(request):
             return ToolMessage(content=APPROVAL_REFUSAL, name=call.get("name"), tool_call_id=call.get("id") or "", status="error")
+        context = getattr(request.runtime, "context", None) or {}
+        if context.get("agent_name") in self.agents and (unsourced := self._unsourced_figures(request)):
+            return ToolMessage(content=FIGURE_REFUSAL.format(figures=", ".join(unsourced)), name=call.get("name"), tool_call_id=call.get("id") or "", status="error")
         return None
 
     def wrap_tool_call(self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], ToolMessage | Command]) -> ToolMessage | Command:
@@ -176,8 +221,9 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
         if not reply.strip():
             return None
         review = review_reply(reply, self._evidence(messages), self.draft_words)
+        notice = CUT_NOTICE if was_cut(last) else ""
         if not review.findings:
-            return None
+            return {"messages": [last.model_copy(update={"content": with_text(last.content, reply + notice)})]} if notice else None
         key = self._key(runtime)
         with self._lock:
             revisions = self._revisions.get(key, 0)
@@ -187,7 +233,7 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
                 return {"messages": [RemoveMessage(id=last.id)], "jump_to": "model"}
         extra = dict(last.additional_kwargs or {})
         extra["mwenza_constitution"] = review.to_dict() | {"revisions": revisions}
-        return {"messages": [last.model_copy(update={"content": with_text(last.content, remediate(reply, review)), "additional_kwargs": extra})]}
+        return {"messages": [last.model_copy(update={"content": with_text(last.content, remediate(reply, review) + notice), "additional_kwargs": extra})]}
 
     @hook_config(can_jump_to=["model"])
     async def aafter_model(self, state: Any, runtime: Any) -> dict[str, Any] | None:

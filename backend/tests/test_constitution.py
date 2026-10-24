@@ -163,6 +163,35 @@ def test_evidence_round_trips_through_a_stored_record():
     assert [finding.kind for finding in review_reply("Asante (2019) showed it (10.5555/synthetic.0002).", restored).findings] == ["retracted", "retracted"]
 
 
+CAPSULE = json.dumps({"capsule_id": "0a1b2c3d4e5f", "stdout": "[SYNTHETIC] mean wait 12.3456 min\nt = 2.171, p = 0.0342\nshare agreeing 0.473\n", "evidence": {"kind": "computed", "capsule_id": "0a1b2c3d4e5f"}})
+
+
+def test_numbers_in_a_reply_must_come_from_the_analysis_once_one_has_run():
+    computed = Evidence.collect([CAPSULE], ["[SYNTHETIC STUDENT] My pilot SD was 1.5."])
+    assert computed.computed == {"0a1b2c3d4e5f"}
+    reply = "The mean wait was 12.35 minutes (t = 2.17, p = .034), 47.3% agreed, and your pilot SD of 1.5 fits."
+    assert review_reply(reply, computed).status == "pass", "rounded, leading-zero-free and percentage forms all match"
+    review = review_reply("The effect was d = 0.58, so the mean of 12.3 holds.", computed)
+    assert kinds(review) == ["unverified-number"] and review.findings[0].excerpt == "0.58" and review.blocking
+    assert "0.58 " + LABELS["unverified-number"] in remediate("The effect was d = 0.58.", review_reply("The effect was d = 0.58.", computed))
+
+
+def test_bounds_code_and_versions_are_not_checked_and_no_run_means_no_check():
+    computed = Evidence.collect([CAPSULE])
+    reply = "Overall p < .001 and p ≥ 0.05 elsewhere. Run `x = 9.99` or:\n```python\nprint(round(4.56, 2))\n```\nIt ran on R 4.2 (version 3.12 of Python)."
+    assert review_reply(reply, computed).status == "pass"
+    assert review_reply("It is below the usual threshold of 0.05, at alpha = .01.", computed).status == "pass", "conventional levels are not results"
+    assert kinds(review_reply("The result was p = .05 and t(38) = 0.01.", computed)) == ["unverified-number", "unverified-number"], "unless stated as one"
+    assert review_reply("The mean is 4.56.", evidence()).status == "pass", "without a sandbox run, numbers are not checked"
+
+
+def test_computed_evidence_round_trips_through_a_stored_record():
+    restored = Evidence()
+    restored.merge(json.loads(json.dumps(Evidence.collect([CAPSULE]).to_dict())))
+    assert restored.computed == {"0a1b2c3d4e5f"} and review_reply("p = 0.034", restored).status == "pass"
+    assert kinds(review_reply("p = 0.044", restored)) == ["unverified-number"]
+
+
 def test_module_is_standard_library_only_so_deerflow_can_vendor_it():
     source = Path(__file__).parents[1] / "src" / "mwenza_engine" / "constitution.py"
     tree = ast.parse(source.read_text(encoding="utf-8"))

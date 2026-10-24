@@ -41,7 +41,12 @@ On every final reply from the `mwenza` agent, or from any agent that has used a 
 | DOI, link or author-year citation not in the evidence | blocks |
 | Retracted work cited | blocks |
 | Long declarative paragraph not addressed to the student (paste-ready thesis text) | blocks |
+| After a sandbox run: a decimal number that isn't in the run's output, another Mwenza tool result or the student's text | blocks |
 | Preprint cited without saying so | warns |
+
+A reply the model cut off at its output limit (`finish_reason: length`) gets a line telling the student to say "continue". DeerFlow keeps the partial text but doesn't say it's partial.
+
+Tool calls are checked too. The `mwenza` agent can't write files or run commands. `run_analysis` needs the student's approval in their own words. `check_reported_statistics` (as the student's words) and `check_sample_size` refuse any figure that isn't in the student's messages or uploaded files, apart from conventional alpha, power and confidence levels.
 
 Evidence is recorded when a Mwenza tool returns, as `additional_kwargs["mwenza_evidence"]` on the tool message. DeerFlow moves results over 12,000 characters to a file and leaves only a preview, so the record is taken first. It's saved with the thread and never sent to the model.
 
@@ -89,4 +94,4 @@ DEER_FLOW_ROOT="$PWD" docker compose -p deer-flow-dev -f docker/docker-compose-d
 
 ## Not yet done
 
-- Per-agent model routing between local and hosted models (only the hosted Workers AI model is set up so far).
+- H2 onwards (committee room, per-student memory, the Forge): see `docs/analysis/AGENTIC_HARNESS_DESIGN.md`.

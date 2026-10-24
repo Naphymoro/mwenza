@@ -18,6 +18,7 @@ LINEAGE_SIMILARITY = 0.5
 PASTED, MIXED = 0.6, 0.2
 WORD = re.compile(r"[\w'’-]+")
 
+ANALYSIS_KINDS = ("analysis-run", "analysis-rerun")
 ORIGIN_LABELS = {
     "typed": "Typed or edited in Mwenza",
     "pasted": "Pasted from outside Mwenza (origin not recorded)",
@@ -139,6 +140,7 @@ class ProvenanceLedger:
         snapshots = [event for event in events if event.kind == "text-snapshot"]
         checks = [event for event in events if event.kind == "ai-check"]
         searches = [event for event in events if event.kind == "discovery-search"]
+        analyses = [event for event in events if event.kind in ANALYSIS_KINDS]
         attribution = self._attribute(snapshots, checks, sources) if snapshots else []
         integrity = self.verify()
         return {
@@ -146,7 +148,7 @@ class ProvenanceLedger:
             "integrity": integrity,
             "events": [{key: value for key, value in asdict(event).items() if key != "text"} for event in reversed(events)],
             "paragraphs": attribution,
-            "declaration": self._declaration(document_id, snapshots, checks, attribution, integrity, searches),
+            "declaration": self._declaration(document_id, snapshots, checks, attribution, integrity, searches, analyses),
             "origin_labels": ORIGIN_LABELS,
             "method": "paragraph lineage by text similarity across recorded snapshots; paste reports come from the browser; verbatim matches use runs of 10 or more identical words against sources in scope",
         }
@@ -229,10 +231,16 @@ class ProvenanceLedger:
         return matches
 
     @staticmethod
-    def _declaration(document_id: str, snapshots: list[LedgerEvent], checks: list[LedgerEvent], attribution: list[dict[str, Any]], integrity: Mapping[str, Any], searches: list[LedgerEvent] | None = None) -> str:
-        searches = searches or []
+    def _declaration(document_id: str, snapshots: list[LedgerEvent], checks: list[LedgerEvent], attribution: list[dict[str, Any]], integrity: Mapping[str, Any], searches: list[LedgerEvent] | None = None, analyses: list[LedgerEvent] | None = None) -> str:
+        searches, analyses = searches or [], analyses or []
         providers = {"open": "open scholarly metadata (OpenAlex, Crossref, DOAJ)", "asta": "Ai2's Asta Scientific Corpus Tool"}
         search_lines = [f"- {_count(sum(1 for event in searches if event.details.get('provider') == provider), 'literature search')} through {label}" for provider, label in providers.items() if any(event.details.get("provider") == provider for event in searches)]
+        runs = [event for event in analyses if event.kind == "analysis-run"]
+        analysis_lines = [f"- {len(runs)} {'analysis' if len(runs) == 1 else 'analyses'} run in Mwenza's research sandbox, kept as reproducibility capsules (code, input and output hashes, the exact image)"] if runs else []
+        if not snapshots and analyses:
+            ran = [f"- {event.timestamp[:16].replace('T', ' ')} UTC: {event.summary}" + (f"; code sha256 {str(event.details.get('code_sha256'))[:12]}…" if event.details.get("code_sha256") else "") for event in analyses]
+            queries = [f"- {event.timestamp[:10]}: \"{event.details.get('query', '')}\" ({event.details.get('results', 0)} results)" for event in searches]
+            return "\n".join([f"# Research record: {document_id}", "", "## How Mwenza was used", "", *search_lines, *analysis_lines, "- The student approved each analysis before it ran. Mwenza's replies were checked against what each run printed.", "", "## Analyses", "", *ran, *(["", "## Searches", "", *queries] if queries else [])]) + "\n"
         if not snapshots and searches:
             queries = [f"- {event.timestamp[:10]}: \"{event.details.get('query', '')}\" ({event.details.get('results', 0)} results)" for event in searches]
             return "\n".join([f"# Literature search record: {document_id}", "", "## How Mwenza was used", "", *search_lines, "- Mwenza returned search results; the student chose which works to add.", "", "## Searches", "", *queries]) + "\n"
@@ -256,6 +264,7 @@ class ProvenanceLedger:
             "",
             *[f"- {count} {tool_names.get(tool, tool)}" if count != 1 else f"- 1 {tool_names.get(tool, tool).replace('checks', 'check')}" for tool, count in sorted(tools.items())],
             *search_lines,
+            *analysis_lines,
             "- Mwenza gives feedback and questions. It does not generate or rewrite the student's text.",
             "",
             "## The current text",

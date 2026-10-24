@@ -5,6 +5,9 @@ Two rules that no prompt, skill or Forge generation may relax:
 * Grounding. Every DOI, link and author-year citation in a reply must come from evidence the
   agent actually holds in this conversation: a Mwenza tool result, or text the student supplied.
   Retracted works are never presented as evidence; preprints are named as preprints.
+* Computed numbers. Once an analysis has run in the sandbox, every decimal number in a reply must appear in
+  some evidence (the run's printed output, another Mwenza tool result or the student's own text), at the
+  precision shown or rounded from it. Bounds such as "p < .001" are not checked.
 * Integrity. Mwenza teaches; it does not ghost-write. Finished prose that a student could paste
   into a thesis is flagged so it becomes questions, an outline or a labelled example on a
   different topic; if the agent will not rework it, the passage is withheld.
@@ -43,6 +46,13 @@ PASTE_CUE = re.compile(
     r"(?:problem statement|statement of the problem|paragraph|abstract|introduction|literature review|background|section|research questions?|objectives?|aims?|conclusion|chapter|rationale|justification)",
     re.IGNORECASE,
 )
+# A decimal number standing on its own: "0.034", ".034", "-1.25", "47.3%"; not part of a DOI, version or identifier.
+NUMBER = re.compile(r"(?<![\w./-])(?P<sign>[-−])?(?P<value>\d*\.\d+)(?![\w/]|\.\d)(?P<percent>\s?%)?")
+BOUND = re.compile(r"[<>≤≥]\s*=?\s*$")
+# Conventional significance levels ("the usual threshold of 0.05") are not results, unless stated as one ("p = .05").
+CONVENTIONS = frozenset({0.1, 0.05, 0.01, 0.001})
+STATED_RESULT = re.compile(r"(?:\b[pr]|\b[a-zA-Z]{1,3}\(\d+(?:,\s*\d+)?\))\s*=\s*$")
+VERSION = re.compile(r"(?:\b[Vv]|\b[Vv]ersion\s|\bPython\s|\bR\s)$")
 LIST_LINE = re.compile(r"^\s*(?:[-*+•]|\d+[.)]|#{1,6}\s|>|\|)")
 TRAILING_PUNCTUATION = ".,;:!?"
 
@@ -64,6 +74,7 @@ LABELS = {
     "unverified-link": "[unverified: this link did not come from Mwenza's search or from you]",
     "unverified-citation": "[unverified: no matching work in this conversation]",
     "retracted": "[retracted: do not use as evidence]",
+    "unverified-number": "[unverified: this number is not in the analysis output]",
 }
 WITHHELD = "*[Mwenza withheld a passage written for you to paste into your thesis. Ask for the moves this section needs, or for an example on a different topic, and write it in your own words.]*"
 # A labelled example only teaches if it is not the student's own text in disguise: it must share few of the
@@ -79,9 +90,10 @@ GUIDANCE = {
     "unverified-citation": "Every author-year citation must match a work (surname and year) returned by a Mwenza tool or supplied by the student. Search for it, or say plainly that you have no source.",
     "retracted": "This work is retracted. Do not present it as evidence; you may mention the retraction itself.",
     "preprint-uncaveated": "This work is a preprint. Say that it has not been peer reviewed, in the same sentence or the next.",
+    "unverified-number": "This number does not appear in the analysis output, any other Mwenza tool result or the student's text. Report numbers exactly as the run printed them (or rounded from them); if you derived one, show the calculation, or re-run the analysis to print it.",
     "draftable-prose": "This paragraph reads as finished thesis text. Turn it into questions for the student, an outline of the moves to make, or a short example clearly labelled 'Annotated example'.",
 }
-BLOCKING = frozenset({"unverified-doi", "unverified-link", "unverified-citation", "retracted", "draftable-prose"})
+BLOCKING = frozenset({"unverified-doi", "unverified-link", "unverified-citation", "retracted", "unverified-number", "draftable-prose"})
 
 
 def normalise_doi(value: str) -> str:
@@ -128,6 +140,8 @@ class Evidence:
     urls: set[str] = field(default_factory=set)
     author_years: set[tuple[str, int]] = field(default_factory=set)
     student_terms: set[str] = field(default_factory=set)
+    numbers: set[float] = field(default_factory=set)
+    computed: set[str] = field(default_factory=set)  # capsule ids of sandbox runs: their presence turns the number check on
 
     @classmethod
     def collect(cls, tool_outputs: Iterable[str] = (), provided: Iterable[str] = ()) -> Evidence:
@@ -149,6 +163,7 @@ class Evidence:
             self.dois.setdefault(normalise_doi(match.group(0)), Work(doi=normalise_doi(match.group(0)), origin=origin))
         for match in URL.finditer(text):
             self.urls.add(normalise_url(match.group(0)))
+        self.numbers.update(value for value, _decimals, _start, _end in decimal_numbers(text, skip_bounds=False))
         if origin == "student":
             self.student_terms |= topic_terms(text)
             # A reference list or draft the student pasted grounds the citations it contains.
@@ -160,6 +175,8 @@ class Evidence:
             for item in node:
                 self._walk(item, origin)
         elif isinstance(node, dict):
+            if isinstance(node.get("evidence"), dict) and node["evidence"].get("kind") == "computed":
+                self.computed.add(str(node["evidence"].get("capsule_id") or node.get("capsule_id") or "run"))
             if any(key in node for key in ("doi", "title")) and ("authors" in node or "year" in node or "doi" in node):
                 self._add_record(node, origin)
             for value in node.values():
@@ -201,6 +218,8 @@ class Evidence:
             "dois": sorted(self.dois),
             "urls": sorted(self.urls),
             "author_years": sorted([author, year] for author, year in self.author_years),
+            "numbers": sorted(self.numbers),
+            "computed": sorted(self.computed),
         }  # student_terms are rebuilt from the student's messages at each review, never stored with tool results
 
     def merge(self, data: dict[str, Any]) -> None:
@@ -214,6 +233,29 @@ class Evidence:
             self.dois.setdefault(doi, Work(doi=doi))
         self.urls.update(data.get("urls") or [])
         self.author_years.update((str(author), int(year)) for author, year in data.get("author_years") or [])
+        self.numbers.update(float(value) for value in data.get("numbers") or [])
+        self.computed.update(str(capsule) for capsule in data.get("computed") or [])
+
+    def knows_number(self, value: float, decimals: int, percent: bool) -> bool:
+        """Whether a reported number is one the evidence holds, at the precision shown or rounded from it."""
+        candidates = [(value, decimals)] + ([(value / 100, decimals + 2)] if percent else [])
+        for candidate, places in candidates:
+            tolerance = 0.5 * 10**-places + 1e-12
+            if any(abs(known - candidate) <= tolerance for known in self.numbers):
+                return True
+        return False
+
+
+def decimal_numbers(text: str, skip_bounds: bool = True) -> list[tuple[float, int, int, int]]:
+    """(value, decimals, start, end) for each decimal number; a percentage keeps its displayed value."""
+    found = []
+    for match in NUMBER.finditer(text):
+        before = text[max(0, match.start() - 8) : match.start()]
+        if skip_bounds and (BOUND.search(before[-4:]) or VERSION.search(before)):
+            continue
+        value = float(match.group("value")) * (-1 if match.group("sign") else 1)
+        found.append((value, len(match.group("value").split(".", 1)[1]), match.start(), match.end()))
+    return found
 
 
 def topic_terms(text: str) -> set[str]:
@@ -361,6 +403,16 @@ def review_reply(reply: str, evidence: Evidence, draft_words: int = DRAFT_WORDS)
             for work in evidence.works:
                 if work.year == year and author.lower() in work.surnames and work.retracted:
                     add("retracted", reply[start:end], start, end)
+    if evidence.computed:
+        cited = [(match.start(), match.end()) for pattern in (DOI, URL) for match in pattern.finditer(reply)]
+        for value, decimals, start, end in decimal_numbers(_without_code(reply)):
+            if any(left <= start < right for left, right in cited):
+                continue
+            percent = reply[start:end].rstrip().endswith("%")
+            if value in CONVENTIONS and not percent and not STATED_RESULT.search(reply[max(0, start - 12) : start]):
+                continue
+            if not evidence.knows_number(value, decimals, percent):
+                add("unverified-number", reply[start:end].strip(), start, end)
     previous, cued = "", False
     for start, end in _paragraphs(reply):
         paragraph = reply[start:end]
@@ -370,6 +422,15 @@ def review_reply(reply: str, evidence: Evidence, draft_words: int = DRAFT_WORDS)
         previous = paragraph
     review.findings.sort(key=lambda finding: finding.start)
     return review
+
+
+def _without_code(text: str) -> str:
+    """The text with fenced and inline code blanked out, keeping every offset in place."""
+
+    def blank(match: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    return re.sub(r"`[^`\n]*`", blank, re.sub(r"```.*?(?:```|$)", blank, text, flags=re.DOTALL))
 
 
 def _sentence_window(text: str, position: int, reach: int = 300) -> str:

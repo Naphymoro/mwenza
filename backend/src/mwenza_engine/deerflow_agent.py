@@ -116,6 +116,29 @@ async def sse_frames(lines: AsyncIterator[str]) -> AsyncIterator[tuple[str, Any]
         yield event, json.loads("\n".join(data))
 
 
+SANDBOX_TOOLS = ("run_analysis", "rerun_analysis")
+RUN_FIELDS = ("capsule_id", "created_at", "language", "image_id", "network", "code_sha256", "inputs", "outputs", "exit_code", "timed_out", "duration_s")
+RERUN_FIELDS = ("capsule_id", "rerun_id", "image_id", "agree", "stdout_identical", "output_differences", "exit_code", "duration_s")
+
+
+def turn_runs(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The sandbox runs of the student's latest turn, as the capsule records the ledger keeps (hashes, not data)."""
+    start = max((index for index, message in enumerate(messages) if message.get("type") == "human"), default=-1)
+    runs = []
+    for message in messages[start + 1 :]:
+        name = str(message.get("name") or "")
+        if message.get("type") != "tool" or message.get("status") == "error" or not any(name == tool or name.endswith("_" + tool) for tool in SANDBOX_TOOLS):
+            continue
+        try:
+            capsule = json.loads(text_of(message.get("content")))
+        except ValueError:
+            continue
+        if isinstance(capsule, dict) and capsule.get("capsule_id"):
+            rerun = "rerun_id" in capsule
+            runs.append({"kind": "rerun" if rerun else "run", **{key: capsule.get(key) for key in (RERUN_FIELDS if rerun else RUN_FIELDS)}})
+    return runs
+
+
 def final_reply(messages: list[dict[str, Any]], private: bool = False) -> dict[str, Any] | None:
     """The reply to the student's latest message: the last AI text, or a clarification question."""
     start = max((index for index, message in enumerate(messages) if message.get("type") == "human"), default=-1)
@@ -210,7 +233,8 @@ class DeerFlowAgent:
                 reply = final_reply(messages, private)
                 if reply is None:
                     raise AgentError("The research agent finished without a reply. Try asking again.")
-                yield {"event": "reply", **reply}
+                runs = turn_runs(messages)
+                yield {"event": "reply", **reply, **({"runs": runs} if runs else {})}
         except AgentError as exc:
             yield {"event": "error", "message": str(exc)}
         except httpx.HTTPError:

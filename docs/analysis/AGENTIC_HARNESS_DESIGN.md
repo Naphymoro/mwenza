@@ -201,7 +201,7 @@ Every critique must cite the student's own text, a check result or a source. Ung
 1. **Runtime:** adopt DeerFlow 2.0 (option A).
 2. **Models:** both hosted and local, routed per agent and task: local models for retrieval, summarising and private data; hosted models for critique and hard reasoning. Which hosted provider is still open.
 3. **Pilot sandboxes:** Docker on a university server, with data kept on site. Hardening (gVisor or a microVM, no Docker socket) as in §4.
-4. **Consent for learning from student traces:** open; opt-in only is recommended. Needed before H3, not before H0.
+4. **Consent for learning from student traces:** opt-in only (decided 2026-10-24). Mwenza learns only from the conversations of students who say yes; everyone else's are never used.
 
 **H0 progress (2026-10-17):** the model-free parts are built in `integrations/deerflow/`:
 - the MCP server runs on DeerFlow's network;
@@ -286,7 +286,9 @@ After a failed revision, that prose is withheld rather than labelled.
 
 The runner's isolation tests pass against real Docker. In the browser, on the local fallback model, a student attached a synthetic CSV. The agent planned without running anything, the student approved, and the analysis ran in the sandbox. The reply's numbers match the capsule's output.
 
-Not yet:
-- the network allowlist;
-- recording capsules in the provenance ledger;
-- checking a reply's numbers against its capsule.
+**H1b completed (2026-10-24):**
+- **Capsules in the provenance ledger.** Each run or re-run in a research chat is recorded in the hash-chained ledger under the document `chat-<thread id>`, with the code, input and output hashes and the image, never the data. `/provenance/chat-<thread id>` gives a research record of the analyses and searches, and the chat page shows "Analysis … recorded in your provenance log".
+- **Replies checked against the capsule.** Once an analysis has run, every decimal number in a reply must appear in the run's printed output, another Mwenza tool result or the student's text, at the precision shown or rounded from it. Otherwise the reply goes back for one revision and is then labelled. Bounds (p < .001), code, software versions and conventional levels (the .05 threshold) are not checked.
+- **No invented inputs for the Reproducer.** `check_reported_statistics` (in the student's own words) and `check_sample_size` refuse any figure that is not in the student's messages or uploaded files; conventional alpha, power and confidence levels are allowed. This closed a live failure: the local 14B composed group means and a t-test, then checked them as the student's own.
+- **Live test** (local 14B, GLM over its cap): the agent proposed the analysis and waited, ran it after "Yes, run it", reported only the run's numbers, and the ledger recorded the capsule with a valid chain.
+- **Network allowlist: not built, by design.** §9's plan adds it only if the baked-in packages prove insufficient, and none has so far.

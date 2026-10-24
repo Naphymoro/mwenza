@@ -100,6 +100,14 @@ function agentReviewNote(review) {
 }
 
 // Bold and inline code only: enough for the agent's replies, with everything escaped first.
+function agentRunsNote(runs) {
+  if (!runs?.length) return "";
+  const items = runs.map((run) => run.kind === "rerun"
+    ? `Re-ran analysis ${run.capsule_id}: ${run.agree ? "same results" : "results differ"}`
+    : `Analysis ${run.capsule_id} recorded in your provenance log`);
+  return `<div class="m-agent-route">${items.map(esc).join(" · ")}</div>`;
+}
+
 function agentText(text) {
   return esc(text).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`\n]+)`/g, "<code>$1</code>");
 }
@@ -119,7 +127,7 @@ async function askAgent(text) {
       if (event === "thread") Object.assign(state, { agentThreadId: data.thread_id, agentPrivate: Boolean(data.private) });
       else if (event === "step") answer.steps.push(data.label);
       else if (event === "notice") answer.status = data.message;
-      else if (event === "reply") Object.assign(answer, { text: data.text, title: AGENT_TITLES[data.kind] || AGENT_TITLES.answer, review: data.review, route: data.route });
+      else if (event === "reply") Object.assign(answer, { text: data.text, title: AGENT_TITLES[data.kind] || AGENT_TITLES.answer, review: data.review, route: data.route, runs: data.runs });
       else if (event === "error") Object.assign(answer, { text: data.message, title: AGENT_TITLES.error });
       render();
       scroll();

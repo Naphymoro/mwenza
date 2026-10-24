@@ -215,3 +215,40 @@ def test_files_just_attached_ride_on_the_next_message_and_steps_cover_this_turn_
     assert [event["tool"] for event in events if event["event"] == "step"] == ["search_literature", "read_file"]
     sent = json.loads(seen[-1].content)["input"]["messages"][0]
     assert sent["additional_kwargs"]["files"] == [{"filename": "survey.csv", "size": 12, "path": "/mnt/user-data/uploads/survey.csv", "status": "uploaded"}]
+
+
+CAPSULE = {"capsule_id": "0a1b2c3d4e5f", "language": "python", "image_id": "sha256:feed", "network": "none", "code_sha256": "ab" * 32, "inputs": [{"name": "survey.csv", "sha256": "cd" * 32}], "outputs": [], "exit_code": 0, "timed_out": False, "duration_s": 1.2, "stdout": "[SYNTHETIC] mean 12.3\n"}
+RERUN = {"capsule_id": "0a1b2c3d4e5f", "rerun_id": "r-01", "image_id": "sha256:feed", "agree": True, "stdout_identical": True, "output_differences": [], "exit_code": 0, "duration_s": 1.1}
+
+
+def run_turn(*tools):
+    calls = {"type": "ai", "content": "", "tool_calls": [{"id": f"c{index}", "name": name, "args": {}} for index, (name, _content, _status) in enumerate(tools)]}
+    results = [{"type": "tool", "name": name, "content": json.dumps(content), "status": status} for name, content, status in tools]
+    earlier = [{"type": "human", "content": "earlier", "id": "h0"}, {"type": "tool", "name": "run_analysis", "content": json.dumps({**CAPSULE, "capsule_id": "ffffffffffff"})}]
+    return sse(("values", {"messages": [*earlier, human(), calls, *results, answer("The mean was 12.3.")]}), ("end", None))
+
+
+def test_this_turns_sandbox_runs_ride_on_the_reply_without_their_data():
+    events = collect(DeerFlowAgent(SETTINGS, gateway(run_turn(("run_analysis", CAPSULE, "success"), ("mwenza_rerun_analysis", RERUN, "success"), ("run_analysis", {"error": "refused"}, "error")))))
+    runs = events[-1]["runs"]
+    assert [run["kind"] for run in runs] == ["run", "rerun"], "earlier turns and refused runs are not repeated"
+    assert runs[0]["capsule_id"] == "0a1b2c3d4e5f" and runs[0]["code_sha256"] == "ab" * 32 and "stdout" not in runs[0]
+    assert runs[1]["agree"] is True
+    assert "runs" not in collect(DeerFlowAgent(SETTINGS, gateway(FULL_RUN)))[-1]
+
+
+def test_the_api_records_each_run_in_the_chats_provenance_ledger(monkeypatch):
+    from mwenza_engine import api
+    from mwenza_engine.provenance import ProvenanceLedger
+
+    monkeypatch.setattr(api.engine, "ledger", ProvenanceLedger())
+    monkeypatch.setattr(api, "research_agent", DeerFlowAgent(SETTINGS, gateway(run_turn(("run_analysis", CAPSULE, "success"), ("rerun_analysis", RERUN, "success")))))
+    client = TestClient(api.app)
+    response = client.post("/agent/chat", json={"message": QUESTION})
+    reply = json.loads(next(line for line in response.text.split("\n\n") if line.startswith("event: reply")).split("data: ", 1)[1])
+    assert [run["ledger"]["seq"] for run in reply["runs"]] == [1, 2]
+    report = client.get("/provenance/chat-thread-0001").json()
+    assert [event["kind"] for event in report["events"]] == ["analysis-rerun", "analysis-run"]
+    assert report["integrity"]["valid"]
+    assert "1 analysis run in Mwenza's research sandbox" in report["declaration"] and "capsule 0a1b2c3d4e5f, exit code 0" in report["declaration"]
+    assert "Re-ran analysis 0a1b2c3d4e5f in the research sandbox: same outputs" in report["declaration"]
