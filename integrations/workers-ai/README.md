@@ -5,7 +5,7 @@ A small Cloudflare Worker that gives DeerFlow an OpenAI-style `/v1/chat/completi
 - **Endpoint:** `https://mwenza-ai.couma.workers.dev/v1/chat/completions`, with `Authorization: Bearer $MWENZA_AI_TOKEN`. Without the token, every path returns 404.
 - **Model:** fixed by the Worker (`MWENZA_AI_MODEL`, currently `@cf/zai-org/glm-5.3-flash`). Callers can't choose another.
 - **Limits:**
-  - Replies are capped at 3,000 tokens.
+  - Replies are capped at 6,000 tokens.
   - The Worker stops for the day once `MWENZA_AI_DAILY_NEURONS` (3,000) are used, and resets at 00:00 UTC.
   - Usage is counted per UTC day in the D1 database `mwenza-ai-usage`.
 - **Content blocks:** list-style message content, as LangChain sends it, is flattened to text.
@@ -35,7 +35,7 @@ npx wrangler secret put MWENZA_AI_TOKEN    # the same value as MWENZA_AI_TOKEN i
     timeout: 300.0
     max_retries: 1
     temperature: 0.3
-    max_tokens: 3000
+    max_tokens: 6000
     supports_thinking: false
     supports_vision: false
     stream_usage: false

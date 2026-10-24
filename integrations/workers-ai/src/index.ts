@@ -15,7 +15,7 @@ export interface Env {
 }
 
 const DAILY_NEURONS = 3000;
-const MAX_TOKENS = 3000; // reasoning models spend part of it thinking
+const MAX_TOKENS = 6000; // reasoning models spend part of it thinking
 const PATH = "/v1/chat/completions";
 
 const today = () => new Date().toISOString().slice(0, 10);
