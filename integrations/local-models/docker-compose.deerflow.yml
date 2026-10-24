@@ -1,0 +1,25 @@
+# The ollama-relay container: DeerFlow's agents reach the host's Ollama through it (see relay.py). Needs the host
+# bridge running first (mwenza-ollama-bridge.service). Nothing is published on the host.
+#
+#   docker compose -f integrations/local-models/docker-compose.deerflow.yml up -d --build    (from the mwenza repo)
+#
+# RELAY_TOKEN comes from the shell or an .env file next to this compose file; the same value is MWENZA_LOCAL_TOKEN
+# in DeerFlow's .env.
+name: mwenza-local-models
+
+services:
+  ollama-relay:
+    build: .
+    user: "${UID:-1001}:${GID:-1001}"   # the socket is mode 600, owned by the host user
+    environment:
+      RELAY_TOKEN: ${RELAY_TOKEN:?set RELAY_TOKEN}
+      RELAY_MODELS: ${RELAY_MODELS:-mwenza-qwen3-8b,mwenza-qwen3-14b}
+    volumes:
+      - ${HOME}/.local/share/mwenza-ollama:/run/ollama
+    networks: [deerflow]
+    restart: unless-stopped
+
+networks:
+  deerflow:
+    external: true
+    name: deer-flow-dev_deer-flow-dev

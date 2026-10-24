@@ -1,0 +1,16 @@
+# Exposes the host's Ollama (127.0.0.1:11434) as a Unix socket for the ollama-relay container. A socket file is
+# not network traffic, so the host firewall that drops container-to-host connections does not apply, and only this
+# user (and the relay, which runs as the same uid) can open it.
+#
+#   install -D -m 644 mwenza-ollama-bridge.service ~/.config/systemd/user/mwenza-ollama-bridge.service
+#   systemctl --user daemon-reload && systemctl --user enable --now mwenza-ollama-bridge
+[Unit]
+Description=Unix-socket bridge to the local Ollama, for Mwenza on DeerFlow
+
+[Service]
+ExecStartPre=/usr/bin/mkdir -p %h/.local/share/mwenza-ollama
+ExecStart=/usr/bin/socat UNIX-LISTEN:%h/.local/share/mwenza-ollama/ollama.sock,fork,mode=600,unlink-early TCP:127.0.0.1:11434
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
