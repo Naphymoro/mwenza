@@ -61,7 +61,10 @@ STUDENT_FIGURE_TOOLS = ("check_reported_statistics", "check_sample_size")
 CONVENTIONAL = {"alpha": (0.05, 0.01, 0.1), "power": (0.8, 0.9, 0.95), "confidence": (0.9, 0.95, 0.99)}
 FIGURE = re.compile(r"(?<![\w.])[-−]?(\d*\.?\d+)(\s?%)?")
 UPLOADS = "/mnt/user-data/uploads/"
-FIGURE_REFUSAL = "Not checked: {figures} did not come from the student's messages or files. Check only figures the student reported, and ask them for any that are missing; never fill them in yourself. To get results from their data, propose an analysis (run_analysis) and ask for their approval."
+FIGURE_REFUSAL = (
+    "Not checked: {figures} did not come from the student's messages or files. Check only figures the student reported, and ask them for any that are missing; "
+    "never fill them in yourself. To get results from their data, propose an analysis (run_analysis) and ask for their approval."
+)
 CORRECTION_NAME = "mwenza_constitution"
 EVIDENCE_KEY = "mwenza_evidence"
 CUT_NOTICE = "\n\n(My answer was cut short here. Say 'continue' and I'll finish it.)"

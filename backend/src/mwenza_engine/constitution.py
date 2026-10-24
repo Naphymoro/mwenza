@@ -90,7 +90,10 @@ GUIDANCE = {
     "unverified-citation": "Every author-year citation must match a work (surname and year) returned by a Mwenza tool or supplied by the student. Search for it, or say plainly that you have no source.",
     "retracted": "This work is retracted. Do not present it as evidence; you may mention the retraction itself.",
     "preprint-uncaveated": "This work is a preprint. Say that it has not been peer reviewed, in the same sentence or the next.",
-    "unverified-number": "This number does not appear in the analysis output, any other Mwenza tool result or the student's text. Report numbers exactly as the run printed them (or rounded from them); if you derived one, show the calculation, or re-run the analysis to print it.",
+    "unverified-number": (
+        "This number does not appear in the analysis output, any other Mwenza tool result or the student's text. "
+        "Report numbers exactly as the run printed them (or rounded from them); if you derived one, show the calculation, or re-run the analysis to print it."
+    ),
     "draftable-prose": "This paragraph reads as finished thesis text. Turn it into questions for the student, an outline of the moves to make, or a short example clearly labelled 'Annotated example'.",
 }
 BLOCKING = frozenset({"unverified-doi", "unverified-link", "unverified-citation", "retracted", "unverified-number", "draftable-prose"})
