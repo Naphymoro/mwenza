@@ -5,13 +5,15 @@ Two rules that no prompt, skill or Forge generation may relax:
 * Grounding. Every DOI, link and author-year citation in a reply must come from evidence the
   agent actually holds in this conversation: a Mwenza tool result, or text the student supplied.
   Retracted works are never presented as evidence; preprints are named as preprints.
-* Integrity. Mwenza teaches; it does not ghost-write. Long, finished prose that a student could
-  paste into a thesis is flagged so it becomes questions, an outline or a labelled example.
+* Integrity. Mwenza teaches; it does not ghost-write. Finished prose that a student could paste
+  into a thesis is flagged so it becomes questions, an outline or a labelled example on a
+  different topic; if the agent will not rework it, the passage is withheld.
 
 The module is standard-library only and imports nothing else from ``mwenza_engine``, so the
 DeerFlow middleware can vendor it unchanged (see ``integrations/deerflow``). Its citation
-patterns follow ``citations.py``; keep the two in step. The prose check is word-count based and
-advisory in spirit (long, declarative, not addressed to the student): the middleware asks the agent to rework once, then labels rather than deletes.
+patterns follow ``citations.py``; keep the two in step. The prose check is a heuristic (word count,
+not addressed to the student, an offer to paste, and topic overlap with the student's own text for
+anything labelled as an example); thresholds were set against real replies from GLM and Qwen3.
 """
 
 from __future__ import annotations
@@ -32,6 +34,15 @@ CITE_IN_PARENS = re.compile(rf"(?P<author>{SURNAME})(?:\s+(?:et\s+al\.?|(?:and|&
 YEAR_TOKEN = re.compile(rf"\b{YEAR}\b")
 SENTENCE_END = re.compile(r"[.!?](?:[\"'”’)\]]*)(?:\s|$)")
 SECOND_PERSON = re.compile(r"\b(?:you|your|yours|yourself)\b", re.IGNORECASE)
+# An offer of text to paste ("you can paste this", "here is your revised problem statement") marks what follows as
+# thesis text, however short and whatever its form.
+PASTE_CUE = re.compile(
+    r"\b(?:you can|you could|feel free to|ready to)\s+(?:paste|copy|insert|drop|use)\b"
+    r"|\b(?:paste|copy)\s+(?:it|this|these|the following)\s+(?:in|into|straight)\b"
+    r"|\bhere(?:'s| is| are)\s+(?:a|an|your|the|my)\s+(?:(?:revised|draft|rewritten|polished|full|final|improved|new)\s+)*"
+    r"(?:problem statement|statement of the problem|paragraph|abstract|introduction|literature review|background|section|research questions?|objectives?|aims?|conclusion|chapter|rationale|justification)",
+    re.IGNORECASE,
+)
 LIST_LINE = re.compile(r"^\s*(?:[-*+•]|\d+[.)]|#{1,6}\s|>|\|)")
 TRAILING_PUNCTUATION = ".,;:!?"
 
@@ -44,8 +55,9 @@ NOT_AUTHORS = frozenset(
     ).split()
 )
 
-DRAFT_WORDS = 120
-DRAFT_SENTENCES = 4
+DRAFT_WORDS = 80
+DRAFT_SENTENCES = 3
+CUED_DRAFT_WORDS = 30
 EXAMPLE_LABEL = "Annotated example"
 LABELS = {
     "unverified-doi": "[unverified: this DOI did not come from Mwenza's search or from you]",
@@ -53,7 +65,14 @@ LABELS = {
     "unverified-citation": "[unverified: no matching work in this conversation]",
     "retracted": "[retracted: do not use as evidence]",
 }
-DRAFT_BANNER = f"**{EXAMPLE_LABEL}, not your text.** Use it to see the moves the writing makes; do not paste it into your thesis."
+WITHHELD = "*[Mwenza withheld a passage written for you to paste into your thesis. Ask for the moves this section needs, or for an example on a different topic, and write it in your own words.]*"
+# A labelled example only teaches if it is not the student's own text in disguise: it must share few of the
+# words the student used (GLM's off-topic example: 0.16; Qwen3 relabelling the student's paragraph: 0.45).
+EXAMPLE_TOPIC_OVERLAP = 0.30
+OVERLAP_STOPWORDS = frozenset(
+    "the and for with from that this these those into their there they them than then also such each other over under more most less "
+    "were have has had are was not but its our your how why who what when where which while about because".split()
+)
 GUIDANCE = {
     "unverified-doi": "Cite only DOIs returned by a Mwenza tool in this conversation or supplied by the student. Search for the work, or remove the reference and say you could not find a source.",
     "unverified-link": "Link only to URLs returned by a Mwenza tool or supplied by the student.",
@@ -108,6 +127,7 @@ class Evidence:
     dois: dict[str, Work] = field(default_factory=dict)
     urls: set[str] = field(default_factory=set)
     author_years: set[tuple[str, int]] = field(default_factory=set)
+    student_terms: set[str] = field(default_factory=set)
 
     @classmethod
     def collect(cls, tool_outputs: Iterable[str] = (), provided: Iterable[str] = ()) -> Evidence:
@@ -130,6 +150,7 @@ class Evidence:
         for match in URL.finditer(text):
             self.urls.add(normalise_url(match.group(0)))
         if origin == "student":
+            self.student_terms |= topic_terms(text)
             # A reference list or draft the student pasted grounds the citations it contains.
             for author, year in cited_author_years(text):
                 self.author_years.add((author.lower(), year))
@@ -180,7 +201,7 @@ class Evidence:
             "dois": sorted(self.dois),
             "urls": sorted(self.urls),
             "author_years": sorted([author, year] for author, year in self.author_years),
-        }
+        }  # student_terms are rebuilt from the student's messages at each review, never stored with tool results
 
     def merge(self, data: dict[str, Any]) -> None:
         """Add a record made by ``to_dict``."""
@@ -193,6 +214,16 @@ class Evidence:
             self.dois.setdefault(doi, Work(doi=doi))
         self.urls.update(data.get("urls") or [])
         self.author_years.update((str(author), int(year)) for author, year in data.get("author_years") or [])
+
+
+def topic_terms(text: str) -> set[str]:
+    return {word for word in re.findall(r"[a-z]{4,}", text.lower()) if word not in OVERLAP_STOPWORDS}
+
+
+def topic_overlap(text: str, student_terms: set[str]) -> float:
+    """Share of a passage's content words that the student also used."""
+    terms = topic_terms(text)
+    return len(terms & student_terms) / len(terms) if terms and student_terms else 0.0
 
 
 def cited_author_years(text: str) -> list[tuple[str, int]]:
@@ -267,14 +298,30 @@ def _paragraphs(text: str) -> list[tuple[int, int]]:
     return spans
 
 
-def _is_draftable(paragraph: str, previous: str, draft_words: int) -> bool:
+def _is_draftable(paragraph: str, previous: str, draft_words: int, cued: bool = False, student_terms: set[str] = frozenset()) -> bool:
+    """Whether a paragraph reads as text for the student to paste.
+
+    Uncued: long, declarative prose that does not address the student. Cued (the reply offers text to paste):
+    any block of CUED_DRAFT_WORDS or more that does not address the student, lists and questions included, since
+    research questions are written as questions.
+    """
+    cue = PASTE_CUE.search(paragraph)
+    if cue:
+        paragraph = paragraph[cue.end() :]  # judge what follows the offer, not the offer itself
     lines = [line for line in paragraph.splitlines() if line.strip()]
-    if not lines or any(LIST_LINE.match(line) for line in lines):
+    if not lines:
         return False
-    if EXAMPLE_LABEL.lower() in paragraph.lower()[:200] or EXAMPLE_LABEL.lower() in previous.lower()[-300:]:
+    labelled = EXAMPLE_LABEL.lower() in paragraph.lower()[:200] or EXAMPLE_LABEL.lower() in previous.lower()[-300:]
+    if labelled:
+        if topic_overlap(paragraph, student_terms) < EXAMPLE_TOPIC_OVERLAP:
+            return False
+        cued = True  # an "example" on the student's own topic is their text under another name
+    if SECOND_PERSON.search(paragraph):
+        return False  # talk addressed to the student is teaching rather than thesis text
+    if cued:
+        return len(paragraph.split()) >= CUED_DRAFT_WORDS
+    if any(LIST_LINE.match(line) for line in lines) or "?" in paragraph:
         return False
-    if "?" in paragraph or SECOND_PERSON.search(paragraph):
-        return False  # questions, or talk addressed to the student, are teaching rather than thesis text
     return len(paragraph.split()) >= draft_words and len(SENTENCE_END.findall(paragraph)) >= DRAFT_SENTENCES
 
 
@@ -314,10 +361,11 @@ def review_reply(reply: str, evidence: Evidence, draft_words: int = DRAFT_WORDS)
             for work in evidence.works:
                 if work.year == year and author.lower() in work.surnames and work.retracted:
                     add("retracted", reply[start:end], start, end)
-    previous = ""
+    previous, cued = "", False
     for start, end in _paragraphs(reply):
         paragraph = reply[start:end]
-        if _is_draftable(paragraph, previous, draft_words):
+        cued = cued or bool(PASTE_CUE.search(paragraph))  # an offer to paste covers everything after it
+        if _is_draftable(paragraph, previous, draft_words, cued, evidence.student_terms):
             add("draftable-prose", paragraph.strip()[:160] + ("…" if len(paragraph.strip()) > 160 else ""), start, end)
         previous = paragraph
     review.findings.sort(key=lambda finding: finding.start)
@@ -335,21 +383,21 @@ def _sentence_window(text: str, position: int, reach: int = 300) -> str:
 
 
 def remediate(reply: str, review: Review) -> str:
-    """Label what the agent could not fix: unverified and retracted references, and draftable prose.
-
-    Nothing the agent wrote is deleted; the student sees the label and the reason.
+    """Handle what the agent could not fix. References that could not be verified, or are retracted, keep their
+    place with a label, so the student sees the claim and the reason. A passage written for the student to paste is
+    withheld: labelling it would still hand them the text.
     """
-    edits: list[tuple[int, str]] = []
+    edits: list[tuple[int, int, str]] = []
     for finding in review.findings:
         if finding.kind == "draftable-prose":
-            edits.append((finding.start, DRAFT_BANNER + "\n\n"))
+            edits.append((finding.start, finding.end, WITHHELD + "\n\n"))
         elif finding.kind in LABELS:
-            edits.append((finding.end, " " + LABELS[finding.kind]))
+            edits.append((finding.end, finding.end, " " + LABELS[finding.kind]))
     text = reply
-    for position, insertion in sorted(edits, key=lambda edit: edit[0], reverse=True):
-        text = text[:position] + insertion + text[position:]
+    for start, end, replacement in sorted(edits, key=lambda edit: edit[0], reverse=True):
+        text = text[:start] + replacement + text[end:]
     if review.blocking:
-        text += "\n\n---\n*Mwenza's integrity check labelled parts of this reply. Labels show what could not be verified or what is an example rather than your own text.*"
+        text = text.rstrip() + "\n\n---\n*Mwenza's integrity check changed this reply: labels mark what could not be verified, and passages written for you to paste are withheld.*"
     return text
 
 

@@ -35,8 +35,9 @@ def test_tools_are_listed_with_read_only_annotations():
         return (await client.list_tools()).tools
 
     tools = {tool.name: tool for tool in run(scenario)}
-    assert set(tools) == {"search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "navigate_methodology", "audit_citations"}
-    assert all(tool.annotations.read_only_hint for tool in tools.values())
+    assert set(tools) == {"search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "navigate_methodology", "audit_citations", "check_reported_statistics", "check_sample_size", "run_analysis", "rerun_analysis"}
+    assert all(tool.annotations.read_only_hint for name, tool in tools.items() if name not in ("run_analysis", "rerun_analysis"))
+    assert not tools["run_analysis"].annotations.read_only_hint and not tools["run_analysis"].annotations.open_world_hint
     assert tools["search_literature"].annotations.open_world_hint and not tools["audit_citations"].annotations.open_world_hint
     assert set(tools["search_literature"].input_schema["properties"]) == {"query", "scope", "limit", "year_from", "year_to"}
 
@@ -149,3 +150,16 @@ def test_request_urls_with_keys_are_not_logged():
 
     build_server(discovery(FakeOpenApis()))
     assert logging.getLogger("httpx").getEffectiveLevel() >= logging.WARNING
+
+
+def test_reproducer_tools_recompute_and_refuse_bad_designs():
+    async def scenario(client):
+        stats = payload(await client.call_tool("check_reported_statistics", {"text": "[SYNTHETIC] Age did not predict delivery, t(120) = 1.20, p = .03.", "wording": "researcher's own words"}))
+        size = payload(await client.call_tool("check_sample_size", {"design": "two-means", "parameters": {"difference": 5, "sd": 10}, "reported_n": 30, "wording": "agent paraphrase"}))
+        bad = await client.call_tool("check_sample_size", {"design": "proportion", "parameters": {"p": 0.5}, "wording": "researcher's own words"})
+        return stats, size, bad
+
+    stats, size, bad = run(scenario)
+    assert stats["status"] == "decision-errors" and stats["input_wording"] == "researcher's own words"
+    assert size["verdict"] == "too-small" and size["computed_n"] == 64 and "confirm_with_researcher" in size
+    assert bad.is_error and "Cannot compute" in bad.content[0].text

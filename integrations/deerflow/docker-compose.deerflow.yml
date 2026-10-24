@@ -16,9 +16,15 @@ services:
     build:
       context: ../../backend
       dockerfile: ../integrations/deerflow/Dockerfile.mcp
+    # Runs as the host user so it can open the sandbox runner's socket (mode 600). Only the socket's folder is mounted,
+    # not the capsule store. Without the runner, run_analysis says the sandbox is not set up.
+    user: "${UID:-1001}:${GID:-1001}"
     environment:
       MWENZA_OPENALEX_KEY: ${MWENZA_OPENALEX_KEY:-}
       MWENZA_CONTACT_EMAIL: ${MWENZA_CONTACT_EMAIL:-}
+      MWENZA_RUNNER_SOCKET: /run/mwenza-runner/runner.sock
+    volumes:
+      - ${HOME}/.local/share/mwenza-runner/socket:/run/mwenza-runner
     networks: [deerflow]
     restart: unless-stopped
 

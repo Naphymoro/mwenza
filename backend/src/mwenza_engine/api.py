@@ -4,17 +4,22 @@ import os
 import tempfile
 from pathlib import Path
 
+import json
+
 from fastapi import FastAPI, File, HTTPException, Path as PathParam, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .deerflow_agent import AgentError, DeerFlowAgent
 from .discovery import DiscoveryError, LiteratureDiscovery, serialise
 from .open_discovery import SOURCE_REGISTRY, OpenDiscovery, serialise as serialise_open
 from .golden_thread import ResearchDesign
 from .navigator import NavigatorError, catalogue as navigator_catalogue, recommend as navigator_recommend
 from .paradigm import MethodDesign
+from .reproducer import SampleSizeError, check_reported_statistics, check_sample_size
 from .pipeline import NotebookEngine
 from .model_gateway import ModelGateway
 from .tools import tool_catalogue
@@ -28,6 +33,7 @@ DOCUMENT_ID = r"^[\w.-]{1,120}$"
 model_gateway = ModelGateway()
 discovery = LiteratureDiscovery()
 open_discovery = OpenDiscovery()
+research_agent = DeerFlowAgent.from_env()
 
 
 class QueryRequest(BaseModel):
@@ -45,6 +51,28 @@ class WorkflowRunRequest(BaseModel):
     workflow_id: str = Field(min_length=2, max_length=80)
     objective: str = Field(min_length=2, max_length=4000)
     source_ids: set[str] | None = None
+
+
+class StatisticsCheckRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=200_000)
+
+
+class SampleSizeRequest(BaseModel):
+    design: Literal["proportion", "two-proportions", "two-means", "correlation"]
+    parameters: dict[str, float | int | bool]
+    reported_n: int | None = Field(default=None, ge=1)
+
+
+class AttachedFile(BaseModel):
+    filename: str = Field(min_length=1, max_length=255, pattern=r"^[^/\\]+$")
+    size: int = Field(default=0, ge=0)
+
+
+class AgentChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=8000)
+    thread_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9-]{8,64}$")
+    private: bool = False
+    files: list[AttachedFile] = Field(default_factory=list, max_length=20)
 
 
 Items = list[str]
@@ -293,3 +321,54 @@ def navigator_recommendation(request: NavigatorRequest) -> dict[str, object]:
         return navigator_recommend(request.answers)
     except NavigatorError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/agent/status")
+def agent_status() -> dict[str, object]:
+    """Whether the research chat runs on the DeerFlow agent; without it the page answers from local sources only."""
+    return research_agent.status() if research_agent else {"enabled": False}
+
+
+@app.post("/agent/chat")
+async def agent_chat(request: AgentChatRequest) -> StreamingResponse:
+    """One student turn with the research agent, as Server-Sent Events: thread, step, notice, reply, error."""
+    if research_agent is None:
+        raise HTTPException(status_code=503, detail="The research agent is not configured. Set MWENZA_DEERFLOW_URL and MWENZA_DEERFLOW_TOKEN.")
+    agent = research_agent
+
+    async def events():
+        async for event in agent.chat(request.message, request.thread_id, request.private, [item.model_dump() for item in request.files]):
+            name = event.pop("event")
+            yield f"event: {name}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+
+@app.post("/reproducer/statistics")
+def reproducer_statistics(request: StatisticsCheckRequest) -> dict[str, object]:
+    return check_reported_statistics(request.text)
+
+
+@app.post("/reproducer/sample-size")
+def reproducer_sample_size(request: SampleSizeRequest) -> dict[str, object]:
+    try:
+        return check_sample_size(request.design, request.parameters, request.reported_n)
+    except SampleSizeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+MAX_AGENT_UPLOAD = 50 * 1024 * 1024
+
+
+@app.post("/agent/upload")
+async def agent_upload(file: UploadFile = File(...), thread_id: str | None = Query(default=None, pattern=r"^[A-Za-z0-9-]{8,64}$"), private: bool = Query(default=False)) -> dict[str, object]:
+    """Attach a data file to the research chat; the agent and the sandbox read it from the chat's uploads."""
+    if research_agent is None:
+        raise HTTPException(status_code=503, detail="The research agent is not configured.")
+    content = await file.read(MAX_AGENT_UPLOAD + 1)
+    if len(content) > MAX_AGENT_UPLOAD:
+        raise HTTPException(status_code=413, detail="The file is larger than 50 MB.")
+    try:
+        return await research_agent.upload(file.filename or "upload", content, thread_id, private)
+    except AgentError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

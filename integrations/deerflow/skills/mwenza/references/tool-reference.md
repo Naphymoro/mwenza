@@ -24,6 +24,25 @@ All three take `wording`: `researcher's own words` or `agent paraphrase`. With a
 | `check_paradigm_fit` | `design`: `paradigm`, `approach`, `logic`, `strategy`, `time_horizon`, `sampling`, `sample_size`, `data_collection[]`, `analysis[]`, `quality[]`, `hypotheses[]`, `questions[]` | `status`, `issues[]` with `message`, `teach`, `ask`, `alternatives` |
 | `audit_citations` | `text` (the student's draft), `sources[]` (`name` with surname and year, `text`, optional `id`), optional `references` linking `[1]`-style keys to source ids | `sentences[]`: each citation's `verdict` (`supported`, `partial`, `contrasting`, `misquoted-number`, `unrelated`, `unresolved`) and the matching `passage`; `flags` such as `needs-citation` |
 
+## Reproducer
+
+Both take `wording`, like the checks above.
+
+| Tool | Inputs | Read first |
+| --- | --- | --- |
+| `check_reported_statistics` | `text` with APA-style results: `t(df) = x, p = y`, `F(df1, df2) = x`, `χ2(df, N = n) = x`, `r(df) = x`, `z = x` | `status`; `results[]` with `verdict` (`consistent`, `inconsistent`, `decision-error`), `computed_p`, `note`, `teach` |
+| `check_sample_size` | `design` (`proportion`, `two-proportions`, `two-means`, `correlation`), `parameters`, `reported_n` | `computed_n`, `verdict` (`consistent`, `larger-than-needed`, `too-small`), `steps`, `achieved_power` |
+
+## Sandbox
+
+| Tool | Inputs | Read first |
+| --- | --- | --- |
+| `run_analysis` | `language` (`python` or `r`), `code`, `inputs` (uploaded file names), `approval` (the student's words) | `exit_code`, `stdout`, `stderr`, `outputs`, `capsule_id`, `delivered_to`; `evidence.note` |
+| `rerun_analysis` | `capsule_id` | `agree`, `output_differences`, `stdout_identical` |
+
+The sandbox has no network. Python has pandas, numpy, scipy, statsmodels, pingouin, lifelines and matplotlib; R has
+dplyr, readr, tidyr, ggplot2, lme4, survival and psych. Limits: 1 CPU, 1 GB of memory, 120 s.
+
 ## Navigator
 
 `navigate_methodology` takes `answers`: the option ids chosen so far (`[]` to start). It returns either

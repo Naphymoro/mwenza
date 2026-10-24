@@ -33,7 +33,27 @@ from langgraph.types import Command
 
 from .constitution import DRAFT_WORDS, Evidence, correction_prompt, remediate, review_reply
 
-MWENZA_TOOLS = ("search_literature", "lookup_doi", "get_citations", "check_published_version", "check_golden_thread", "check_paradigm_fit", "navigate_methodology", "audit_citations")
+MWENZA_TOOLS = (
+    "search_literature",
+    "lookup_doi",
+    "get_citations",
+    "check_published_version",
+    "check_golden_thread",
+    "check_paradigm_fit",
+    "navigate_methodology",
+    "audit_citations",
+    "check_reported_statistics",
+    "check_sample_size",
+    "run_analysis",
+    "rerun_analysis",
+)
+# Writing tools let a model hand a student finished text outside the reply the constitution reads, so the mwenza
+# agent never gets them, whichever path builds its tool set (the embedded client ignores agent tool groups).
+WRITING_TOOLS = ("write_file", "str_replace", "bash", "edit_file", "python_repl")
+WRITING_REFUSAL = "Mwenza does not write files or run commands for students. Give the student questions, an outline or a labelled example in your reply instead."
+# Running code is a human checkpoint: run_analysis carries the student's approval, which must be their own words.
+APPROVAL_TOOLS = ("run_analysis",)
+APPROVAL_REFUSAL = "Not run: the approval must be the student's own words, quoted from their latest message. Show them what the analysis will do (data, method, outputs), ask whether to run it, and pass their reply as approval."
 CORRECTION_NAME = "mwenza_constitution"
 EVIDENCE_KEY = "mwenza_evidence"
 
@@ -120,11 +140,31 @@ class MwenzaConstitutionMiddleware(AgentMiddleware):
         extra[EVIDENCE_KEY] = Evidence.collect([text_of(result.content)]).to_dict()
         return result.model_copy(update={"additional_kwargs": extra})
 
+    @staticmethod
+    def _normalise(text: str) -> str:
+        return " ".join(text.lower().split())
+
+    def _approved(self, request: ToolCallRequest) -> bool:
+        """The approval quotes the student's latest visible message."""
+        approval = self._normalise(str((request.tool_call.get("args") or {}).get("approval", "")))
+        state = request.state if isinstance(request.state, dict) else {"messages": getattr(request.state, "messages", [])}
+        latest = next((message for message in reversed(state.get("messages") or []) if isinstance(message, HumanMessage) and not (message.additional_kwargs or {}).get("hide_from_ui") and message.name != CORRECTION_NAME), None)
+        return len(approval) >= 2 and latest is not None and approval in self._normalise(text_of(latest.content))
+
+    def _refuse_writing(self, request: ToolCallRequest) -> ToolMessage | None:
+        call = request.tool_call
+        context = getattr(request.runtime, "context", None) or {}
+        if call.get("name") in WRITING_TOOLS and context.get("agent_name") in self.agents:
+            return ToolMessage(content=WRITING_REFUSAL, name=call.get("name"), tool_call_id=call.get("id") or "", status="error")
+        if self._matches(call.get("name"), APPROVAL_TOOLS) and not self._approved(request):
+            return ToolMessage(content=APPROVAL_REFUSAL, name=call.get("name"), tool_call_id=call.get("id") or "", status="error")
+        return None
+
     def wrap_tool_call(self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], ToolMessage | Command]) -> ToolMessage | Command:
-        return self._record(handler(request))
+        return self._refuse_writing(request) or self._record(handler(request))
 
     async def awrap_tool_call(self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]]) -> ToolMessage | Command:
-        return self._record(await handler(request))
+        return self._refuse_writing(request) or self._record(await handler(request))
 
     @hook_config(can_jump_to=["model"])
     def after_model(self, state: Any, runtime: Any) -> dict[str, Any] | None:

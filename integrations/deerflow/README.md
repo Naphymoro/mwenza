@@ -8,6 +8,7 @@ Phase H0 of `docs/analysis/AGENTIC_HARNESS_DESIGN.md`: Mwenza runs as an agent i
 | Skill | `skills/mwenza/` | `skills/public/mwenza/` |
 | Lead agent | `agent/SOUL.md` (config written by `install.sh`) | `backend/.deer-flow/agents/mwenza/` |
 | Constitution middleware | `mwenza_deerflow/middleware.py` + `backend/src/mwenza_engine/constitution.py` | `backend/mwenza_deerflow/`, listed under `middlewares` in `extensions_config.json` |
+| Model fallback middleware | `mwenza_deerflow/routing.py` | the same folder, listed after the constitution (only with `MWENZA_FALLBACK_MODEL`) |
 
 ## Install
 
@@ -20,7 +21,7 @@ integrations/deerflow/install.sh /path/to/deer-flow
 docker restart deer-flow-gateway      # only needed after the middleware changes
 ```
 
-`install.sh` is idempotent: run it again after changing the skill, the agent, the middleware or `constitution.py`. Everything stays container to container. The host firewall drops container-to-host traffic, and the MCP port is never published on the host because the server has no authentication. It keeps DNS-rebinding protection on with `--allowed-host mwenza-mcp`.
+Add `MWENZA_FALLBACK_MODEL=mwenza-local-14b` to the install command once the local models are set up. `install.sh` is idempotent: run it again after changing the skill, the agent, the middleware or `constitution.py`. Everything stays container to container. The host firewall drops container-to-host traffic, and the MCP port is never published on the host because the server has no authentication. It keeps DNS-rebinding protection on with `--allowed-host mwenza-mcp`.
 
 ## What the agent can do
 
@@ -61,11 +62,31 @@ A blocked reply is withdrawn from the thread and the agent is asked to revise it
 
 - `h0_llm.py`: the H0 completion test with the real model (`mwenza-glm` on Workers AI, see `../workers-ai`). A synthetic student asks for proposal feedback, asks the agent to ghost-write, then asks for literature.
 
-## Model
+## Models and routing
 
-The agent's model is `mwenza-glm`: GLM-5.3-Flash on Workers AI through the `mwenza-ai` Worker (`../workers-ai`). Pin it with `MWENZA_AGENT_MODEL=mwenza-glm install.sh ...`.
+- **Main model:** `mwenza-glm`, which is GLM-5.3-Flash on Workers AI through the `mwenza-ai` Worker (`../workers-ai`). Pin it with `MWENZA_AGENT_MODEL=mwenza-glm install.sh ...`.
+- **Fallback:** with `MWENZA_FALLBACK_MODEL=mwenza-local-14b install.sh ...`, `MwenzaModelFallbackMiddleware` continues a turn on that local model (`../local-models`) when the main model fails because it's unreachable, over its cap (a 429) or erroring.
+  - After one such failure, the rest of the run goes straight to the fallback.
+  - The reply carries `additional_kwargs["mwenza_model"]`, and Mwenza's page tells the student.
+  - It only falls back from hosted to local, never the other way.
+  - If the fallback model can't be built, the provider's original error is raised.
+- **Private chats:** chosen by the engine, not here. With `MWENZA_DEERFLOW_PRIVATE_MODEL` set, a chat the student marks private runs every call on that local model; the flag is stored in the thread's metadata and can only be switched on. DeerFlow's other model calls also stay local:
+  - title generation is off (`title.model_name: null`);
+  - summarisation uses the run's own model;
+  - the agent's memory is off.
+
+## Mwenza's chat page
+
+The engine's `/agent/chat` (`backend/src/mwenza_engine/deerflow_agent.py`) calls the gateway with DeerFlow's Internal Auth. DeerFlow must have an explicit `DEER_FLOW_INTERNAL_AUTH_TOKEN`; without one, each gateway worker makes up a random token. Put it in DeerFlow's `.env`, and the same value in Mwenza's `.env` as `MWENZA_DEERFLOW_TOKEN`.
+
+DeerFlow's dev Compose file fills that variable from the shell that runs Compose, not from `.env`, and `make docker-start` doesn't export it. Export it when you (re)create the gateway, or it comes up empty:
+
+```bash
+cd deer-flow
+export DEER_FLOW_INTERNAL_AUTH_TOKEN="$(grep -E '^DEER_FLOW_INTERNAL_AUTH_TOKEN=' .env | tail -1 | cut -d= -f2-)"
+DEER_FLOW_ROOT="$PWD" docker compose -p deer-flow-dev -f docker/docker-compose-dev.yaml up -d --no-deps --no-build --force-recreate gateway
+```
 
 ## Not yet done
 
-- Pointing Mwenza's own chat UI at the DeerFlow gateway.
 - Per-agent model routing between local and hosted models (only the hosted Workers AI model is set up so far).

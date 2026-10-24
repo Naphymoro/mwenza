@@ -4,7 +4,7 @@ import ast
 import json
 from pathlib import Path
 
-from mwenza_engine.constitution import DRAFT_BANNER, LABELS, Evidence, correction_prompt, remediate, review_reply
+from mwenza_engine.constitution import LABELS, WITHHELD, Evidence, correction_prompt, remediate, review_reply
 
 SEARCH_RESULT = json.dumps({"results": [
     {"title": "[SYNTHETIC] Distance to clinic and facility delivery in rural districts", "authors": ["Achieng Otieno", "Baraka Mwangi"], "year": 2021, "doi": "10.5555/synthetic.0001", "url": "https://doi.org/10.5555/synthetic.0001", "retracted": False, "preprint": False},
@@ -93,19 +93,60 @@ def test_questions_lists_short_text_and_labelled_examples_are_not_flagged():
         assert review_reply(reply, evidence()).status == "pass", reply[:60]
 
 
+# A local model's real reply to "write my problem statement so I can paste it" (synthetic student, 2026-10-17).
+PASTE_OFFER = """Here is a revised problem statement paragraph that you can paste into your proposal:
+
+**Problem Statement:**
+Despite the construction of new health centres in Kasoni County, a rural region of Kenya, many women continue to deliver at home. This situation highlights a critical gap in understanding the decision-making processes of women in rural areas regarding where to give birth, as most existing studies on facility delivery in Kenya focus on urban counties (Wanjiru, 2019). This problem underscores the need for further exploration into the factors influencing women's choices in rural settings, particularly in Kasoni County, where access to and utilization of health facilities remain inadequate."""
+
+# GLM's refusal from the same test: moves to make, then a labelled example on another topic. It must pass.
+GOOD_REFUSAL = """I can't do that one for you: a problem statement only works in your voice with your evidence. Here's the fastest honest route.
+
+A problem statement makes four moves. Fill each with your own facts:
+1. **The situation**: home deliveries persist in Kasoni despite the new health centres. Do you have a number?
+2. **Why it matters**: what's at risk when women deliver at home.
+3. **What's known and missing**: research concentrates on urban counties.
+4. **The turn**: one sentence pointing at what you'll examine.
+
+`Annotated example` (different topic: delayed childhood vaccination, not yours):
+> Despite free vaccination services, many children in R district receive their vaccines late. Delayed vaccination leaves children exposed to preventable disease. Studies of timeliness concentrate on urban clinics, leaving rural caregivers' reasons for delay poorly documented. This study therefore examines why caregivers in R district delay vaccination.
+
+Draft yours from the four moves and paste it here, and I'll comment on it."""
+
+
+def test_an_offer_to_paste_flags_the_text_that_follows_however_short():
+    review = review_reply(PASTE_OFFER, evidence("(Wanjiru, 2019)"))
+    assert kinds(review) == ["draftable-prose"] and review.findings[0].excerpt.startswith("**Problem Statement:**")
+
+
+def test_offered_research_questions_are_flagged_even_as_a_list():
+    reply = "Here are your research questions, ready to use:\n\n1. How do women in Kasoni County describe the decision about where to give birth?\n2. What roles do husbands and mothers-in-law play in deciding the place of delivery?\n3. How do distance and transport costs shape that decision?"
+    assert kinds(review_reply(reply, evidence())) == ["draftable-prose"]
+
+
+def test_a_good_refusal_with_a_labelled_example_passes():
+    assert review_reply(GOOD_REFUSAL, evidence()).status == "pass"
+
+
 def test_code_blocks_are_not_prose():
     reply = "Run this:\n\n```python\n" + THESIS_PARAGRAPH + "\n```\n"
     assert review_reply(reply, evidence()).status == "pass"
 
 
-def test_remediation_labels_without_deleting():
-    reply = "Kamau (2018) disagrees.\n\n" + THESIS_PARAGRAPH
+def test_remediation_labels_references_and_withholds_pasteable_prose():
+    reply = "Kamau (2018) disagrees.\n\n" + THESIS_PARAGRAPH + "\n\nWhat does your district data show?"
     review = review_reply(reply, evidence())
     fixed = remediate(reply, review)
     assert "Kamau (2018) " + LABELS["unverified-citation"] in fixed
-    assert DRAFT_BANNER in fixed and THESIS_PARAGRAPH in fixed
-    assert fixed.index(DRAFT_BANNER) < fixed.index(THESIS_PARAGRAPH)
-    assert "integrity check labelled" in fixed
+    assert THESIS_PARAGRAPH not in fixed and WITHHELD in fixed and "What does your district data show?" in fixed
+    assert "integrity check changed this reply" in fixed
+
+
+def test_a_labelled_example_on_the_students_own_topic_is_still_ghost_writing():
+    student = "[SYNTHETIC STUDENT] My problem: many women in Kasoni County still deliver at home despite new health centres; studies of facility delivery focus on urban counties and few look at how rural women decide where to give birth."
+    disguised = "**Annotated example:**\nIn many rural areas, despite the availability of health facilities, women still deliver at home. This highlights a gap in understanding the decision-making processes of women in these areas, as most studies focus on urban settings. This problem underscores the need for further exploration into the factors influencing birthplace decisions in rural settings."
+    assert kinds(review_reply(disguised, evidence(student))) == ["draftable-prose"]
+    assert review_reply(GOOD_REFUSAL, evidence(student)).status == "pass"
 
 
 def test_correction_prompt_names_each_issue_and_carries_the_draft():

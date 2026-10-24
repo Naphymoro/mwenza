@@ -120,6 +120,39 @@ Source licences and rate limits are listed in `GET /capabilities` under `data_so
 
 Every preprint carries `preprint`, a standardised `server` name and, where known, `published_doi`, `published_venue`, `published_url` and `published_source` (how the link was established). When a preprint and its published version both appear, only the published version is listed, with a note. Abstracts are stored only under an open licence (arXiv metadata CC0; CC BY or CC0 for other servers). Preprints scope drops anything not marked as a preprint and peer-reviewed scope drops anything that is. arXiv and Crossref requests run one at a time, and Crossref 429s are retried after a pause.
 
+## Reproducer: reported statistics and sample size
+
+`reproducer.py` is the Reproducer agent's deterministic core (phase H1 in `docs/analysis/AGENTIC_HARNESS_DESIGN.md`).
+- **`check_reported_statistics`:** finds APA-style results (t, F, χ², r and z with their p-values) and recomputes each p from the statistic and degrees of freedom. As statcheck does, it allows for rounding of the reported statistic. Each result is consistent, inconsistent, or a decision error (the recomputed p is on the other side of .05), with a note when only a one-tailed test would explain it.
+- **`check_sample_size`:** recomputes a sample-size calculation step by step: Cochran for a proportion (with finite-population correction, design effect and non-response), two proportions, two means (normal approximation with Guenther's t correction) and a correlation (Fisher's z). It reports the power a too-small two-group sample actually gives.
+
+It uses only the standard library, so the engine needs no SciPy. Against SciPy 1.18 the p-values agree to better than 10⁻¹² relative error. Two-means sample sizes equal statsmodels' exact t-test values after rounding up. Routes: `POST /reproducer/statistics` and `POST /reproducer/sample-size`.
+
+## Research agent chat (DeerFlow)
+
+`deerflow_agent.py` runs the page's research chat on the `mwenza` agent in DeerFlow (`integrations/deerflow/`). The engine, not the browser, calls DeerFlow. It uses DeerFlow's Internal Auth, a deployment secret plus an owner id, and always asks for the `mwenza` agent, whose config picks the model.
+
+| Route | What it does |
+| --- | --- |
+| `GET /agent/status` | `{"enabled": true, "agent": "mwenza", ...}` when configured; the page then uses the agent |
+| `POST /agent/chat` | `{"message", "thread_id"?, "private"?}`; Server-Sent Events: `thread` (with `private`), `step` (a tool the agent is using), `notice` (retries), `reply` (`text`; `kind` = answer, question or unavailable; the constitution's `review`; `route` = hosted, private or local-fallback), `error` |
+
+A private chat runs every model call on the private model. Its flag lives in the DeerFlow thread's metadata and can only be switched on, so a later request can't send that conversation to a hosted model. Asking for privacy with no private model set up sends nothing.
+
+Replies are not streamed token by token. The constitution middleware can withdraw a draft and ask for a revision, so the page shows only the final, checked reply.
+
+Settings, kept in the repo's gitignored `.env` and loaded with `set -a; . ./.env; set +a` before starting uvicorn:
+
+| Variable | Meaning |
+| --- | --- |
+| `MWENZA_DEERFLOW_URL` | DeerFlow's entry, e.g. `http://127.0.0.1:2026`. Unset: the chat answers from local sources only |
+| `MWENZA_DEERFLOW_TOKEN` | Equal to DeerFlow's `DEER_FLOW_INTERNAL_AUTH_TOKEN` |
+| `MWENZA_DEERFLOW_AGENT` | Default `mwenza` |
+| `MWENZA_DEERFLOW_OWNER` | DeerFlow owner id for this workspace, default `mwenza-local` |
+| `MWENZA_DEERFLOW_PRIVATE_MODEL` | A local DeerFlow model for private chats, e.g. `mwenza-local-14b`. Unset: private chats aren't offered |
+
+DeerFlow trusts the owner id the engine sends. Mwenza has no student sign-in yet, so every chat from one engine shares one owner. Per-student isolation needs Mwenza accounts first.
+
 ## MCP server
 
 `mcp_server.py` exposes Mwenza to any MCP client (Claude Code, Claude Desktop, other agents) through the official MCP Python SDK. Install it with the `mcp` extra:
@@ -138,8 +171,12 @@ python -m pip install -e '.[mcp]'
 | `check_paradigm_fit` | The paradigm–method check | no |
 | `navigate_methodology` | The method navigator: next question, or the design at the end of the path | no |
 | `audit_citations` | The citation audit, with the cited sources passed inline | no |
+| `check_reported_statistics` | Recompute the p-value of each reported t, F, χ², r and z result | no |
+| `check_sample_size` | Recompute a sample-size calculation (single proportion, two proportions, two means, correlation) | no |
+| `run_analysis` | Run the student's Python or R analysis in the research sandbox, after their approval; returns a reproducibility capsule (`integrations/sandbox`) | no |
+| `rerun_analysis` | Repeat a capsule and report whether the outputs are identical | no |
 
-All tools are read-only. Results are compact records carrying licence, preprint, retraction and published-version fields, and the server's instructions tell agents how to use them (cite preprints as not peer reviewed, never use retracted work as evidence, store abstracts only when `abstract_storable` is true). The resource `mwenza://data-sources` lists each source's licence and rate limit.
+All tools are read-only except the two sandbox tools, which run code in an isolated container with no network. Results are compact records carrying licence, preprint, retraction and published-version fields, and the server's instructions tell agents how to use them (cite preprints as not peer reviewed, never use retracted work as evidence, store abstracts only when `abstract_storable` is true). The resource `mwenza://data-sources` lists each source's licence and rate limit.
 
 The three checks take a required `wording` argument, `researcher's own words` or `agent paraphrase`, so an agent cannot quietly check text it wrote itself: a paraphrase comes back with `confirm_with_researcher`. An empty design, or an audit without source texts, is refused with what to ask the researcher for.
 

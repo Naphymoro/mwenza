@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import anyio
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
@@ -34,6 +34,8 @@ from .ingest import extract_text_file
 from .open_discovery import ATTRIBUTION, SOURCE_REGISTRY, OpenDiscovery, OpenWork
 from .navigator import NavigatorError, recommend as navigator_recommend
 from .paradigm import MethodDesign, ParadigmMethodChecker
+from .sandbox import RunnerClient, SandboxError, for_agent, identity as run_identity
+from .reproducer import SampleSizeError, check_reported_statistics as recompute_statistics, check_sample_size as recompute_sample_size
 
 INSTRUCTIONS = """Mwenza searches openly licensed scholarly metadata (OpenAlex, Crossref, DOAJ, OpenCitations) and preprint servers (arXiv, Europe PMC, Crossref posted content including ChemRxiv and SSRN, AfricArXiv), and checks research designs and citations.
 
@@ -125,7 +127,7 @@ class SourceInput(BaseModel):
     id: str = Field(default="", max_length=120, description="Optional id; use it in references to link numbered citations such as [1]")
 
 
-def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
+def build_server(discovery: OpenDiscovery | None = None, runner: RunnerClient | None = None, identity=run_identity) -> MCPServer:
     # httpx logs full request URLs at INFO, and the OpenAlex key travels in the URL.
     for name in ("httpx", "httpcore"):
         logging.getLogger(name).setLevel(logging.WARNING)
@@ -212,6 +214,56 @@ def build_server(discovery: OpenDiscovery | None = None) -> MCPServer:
             record.name = item.name
             records[source_id] = record
         return with_wording(CitationAuditor().audit(text, records, references).to_dict(), wording)
+
+    @server.tool(title="Check reported statistics", annotations=local)
+    def check_reported_statistics(
+        text: Annotated[str, Field(min_length=1, max_length=200_000, description="The researcher's results text with APA-style statistics, e.g. 't(98) = 2.45, p = .016' or 'F(2, 147) = 3.10, p = .03'")],
+        wording: Wording,
+    ) -> dict[str, Any]:
+        """Recompute the p-value of every reported t, F, chi-square, r and z result from its statistic and degrees of freedom, allowing for rounding; flags inconsistencies and decision errors (a different conclusion at .05)."""
+        return with_wording(recompute_statistics(text), wording)
+
+    @server.tool(title="Check sample size", annotations=local)
+    def check_sample_size(
+        design: Annotated[Literal["proportion", "two-proportions", "two-means", "correlation"], Field(description="proportion: Cochran for a prevalence; two-proportions or two-means: comparing two groups; correlation")],
+        parameters: Annotated[dict[str, float | int | bool], Field(description="proportion: p, margin, confidence, population, design_effect, nonresponse. two-proportions: p1, p2, alpha, power, two_sided. two-means: difference, sd, alpha, power, two_sided. correlation: r, alpha, power, two_sided. Proportions and rates as decimals (0.05, not 5%).")],
+        wording: Wording,
+        reported_n: Annotated[int | None, Field(ge=1, description="The sample size the researcher reports (per group for two-group designs)")] = None,
+    ) -> dict[str, Any]:
+        """Recompute a sample-size calculation step by step and compare it with the reported size; for a too-small two-group sample, also the power it actually gives."""
+        try:
+            return with_wording(recompute_sample_size(design, parameters, reported_n), wording)
+        except SampleSizeError as exc:
+            raise ToolError(str(exc)) from exc
+
+    sandbox = runner or RunnerClient()
+    sandboxed = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False, idempotent_hint=False)
+
+    async def in_sandbox(function, *args):
+        try:
+            return await anyio.to_thread.run_sync(lambda: function(*args))
+        except SandboxError as exc:
+            raise ToolError(str(exc)) from exc
+
+    @server.tool(title="Run an analysis in the research sandbox", annotations=sandboxed)
+    async def run_analysis(
+        language: Annotated[Literal["python", "r"], Field(description="python (pandas, numpy, scipy, statsmodels, pingouin, lifelines, matplotlib) or r (dplyr, readr, tidyr, ggplot2, lme4, survival, psych)")],
+        code: Annotated[str, Field(min_length=1, max_length=200_000, description="The complete script. Inputs are read-only at /work/inputs/<name> (also at /mnt/user-data/uploads/<name>); write files to /work/outputs; print the results the student should see. No network.")],
+        approval: Annotated[str, Field(min_length=2, max_length=500, description="The student's own words approving this analysis, quoted exactly from their latest message. Never write it yourself: show the plan first and ask.")],
+        ctx: Context,
+        inputs: Annotated[list[str], Field(max_length=20, description="File names from the student's uploads in this chat (see list_uploaded_files)")] = [],
+    ) -> dict[str, Any]:
+        """Run the student's analysis in an isolated container (no network, read-only system, resource limits) and return its results with a reproducibility capsule: code, input and output hashes, and the exact image."""
+        try:
+            owner, thread = identity(ctx.headers)
+        except SandboxError as exc:
+            raise ToolError(str(exc)) from exc
+        return for_agent(await in_sandbox(sandbox.run, owner, thread, language, code, list(inputs)))
+
+    @server.tool(title="Re-run an analysis capsule", annotations=sandboxed)
+    async def rerun_analysis(capsule_id: Annotated[str, Field(pattern=r"^[0-9a-f]{12}$", description="The capsule_id of an earlier run")]) -> dict[str, Any]:
+        """Repeat an earlier run in a fresh container with the same image, code and inputs, and report whether the outputs are identical."""
+        return await in_sandbox(sandbox.rerun, capsule_id)
 
     @server.resource("mwenza://data-sources", name="data-sources", title="Data sources and licences", mime_type="application/json")
     def data_sources() -> str:

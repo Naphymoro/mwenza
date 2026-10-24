@@ -4,6 +4,8 @@
 #   integrations/deerflow/install.sh /path/to/deer-flow
 #
 #   MWENZA_AGENT_MODEL=mwenza-glm integrations/deerflow/install.sh /path/to/deer-flow     (pin the agent's model)
+#   MWENZA_FALLBACK_MODEL=mwenza-local-14b ...   (continue on this model when the agent's model is unavailable;
+#                                                 unset: no fallback. See integrations/local-models.)
 #
 # Idempotent; run it again after changing the skill, the middleware or mwenza_engine/constitution.py.
 # Start the MCP server separately (docker-compose.deerflow.yml). The Gateway reloads extensions_config.json
@@ -27,14 +29,16 @@ echo "skill       -> $skill"
 
 # Middleware: importable from the Gateway, which runs with PYTHONPATH=. in backend/. constitution.py is vendored
 # from the engine so the Gateway needs none of Mwenza's dependencies.
+# Replace the .py files in place: the Gateway runs as root and leaves a root-owned __pycache__ here, which the
+# current user cannot delete (Python rebuilds stale bytecode from the newer sources).
 package="$deerflow/backend/mwenza_deerflow"
-rm -rf "$package"
 mkdir -p "$package"
-cp "$here/mwenza_deerflow/__init__.py" "$here/mwenza_deerflow/middleware.py" "$package/"
+find "$package" -maxdepth 1 -name '*.py' -delete
+cp "$here/mwenza_deerflow/__init__.py" "$here/mwenza_deerflow/middleware.py" "$here/mwenza_deerflow/routing.py" "$package/"
 cp "$repo/backend/src/mwenza_engine/constitution.py" "$package/constitution.py"
 echo "middleware  -> $package"
 
-python3 - "$deerflow/extensions_config.json" "$here/agent" "$deerflow/backend/.deer-flow/agents/mwenza" "${MWENZA_AGENT_MODEL:-}" <<'EOF'
+python3 - "$deerflow/extensions_config.json" "$here/agent" "$deerflow/backend/.deer-flow/agents/mwenza" "${MWENZA_AGENT_MODEL:-}" "${MWENZA_FALLBACK_MODEL:-}" <<'EOF'
 import json, shutil, sys
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -48,14 +52,21 @@ servers["mwenza"] = {
     "url": "http://mwenza-mcp:8766/mcp",
     "tool_name_prefix": False,
     "session_init_timeout": 60,
+    # The run's owner and thread travel out-of-band (the engine's context.secrets) so the sandbox uses this chat's
+    # uploads; without them (other callers) the static headers pass and run_analysis refuses.
+    "headers_from_context": {"enabled": True, "headers": {"X-Mwenza-Owner": "mwenza_owner", "X-Mwenza-Thread": "mwenza_thread"}, "on_missing": "passthrough"},
     "description": "Mwenza research tools: open literature discovery, golden-thread and paradigm-method checks, methodology navigator, citation audit. Use with the mwenza skill. Served by the mwenza-mcp container on the DeerFlow network (mwenza/integrations/deerflow/docker-compose.deerflow.yml).",
 }
-entry = {"class": "mwenza_deerflow.middleware:MwenzaConstitutionMiddleware", "kwargs": {"agents": ["mwenza"]}}
-middlewares = [item for item in config.setdefault("middlewares", []) if (item if isinstance(item, str) else item.get("class", "")).split(":")[0] != "mwenza_deerflow.middleware"]
-config["middlewares"] = [*middlewares, entry]
+# The constitution first, then the model fallback, so the fallback sits inside it and the constitution's hidden
+# revision prompt reaches whichever model answers.
+entries = [{"class": "mwenza_deerflow.middleware:MwenzaConstitutionMiddleware", "kwargs": {"agents": ["mwenza"]}}]
+if sys.argv[5]:
+    entries.append({"class": "mwenza_deerflow.routing:MwenzaModelFallbackMiddleware", "kwargs": {"agents": ["mwenza"], "fallback": sys.argv[5]}})
+middlewares = [item for item in config.setdefault("middlewares", []) if not (item if isinstance(item, str) else item.get("class", "")).startswith("mwenza_deerflow.")]
+config["middlewares"] = [*middlewares, *entries]
 # Write in place: Docker bind-mounts this file, and rename() over a mount point fails.
 path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-print(f"config      -> {path} (mcpServers.mwenza, constitution middleware)")
+print(f"config      -> {path} (mcpServers.mwenza, constitution and model-fallback middlewares)")
 
 # The Mwenza lead agent, in DeerFlow's shared agents directory so every user sees it. It gets only the mwenza
 # skill and the mwenza MCP server (DeerFlow's installation id for a server is uuid5 of its name), read-only file

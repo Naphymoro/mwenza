@@ -108,3 +108,13 @@ button { cursor: pointer; }
 .m-old-page .button.primary, .m-old-page .button.blue { border-color: var(--m-accent); background: var(--m-accent); color: #22160f; }
 @media (max-width: 1200px) { .m-app { grid-template-columns: 230px minmax(0, 1fr); } .m-context { display: none; } .m-composer-dock { left: 230px; right: 0; } }
 @media (max-width: 760px) { .m-app { display: block; } .m-rail { min-height: auto; padding: 10px; border-right: 0; border-bottom: 1px solid var(--m-border); } .m-brand { padding: 0 5px 10px; } .m-nav-label, .m-recent, .m-rail-foot { display: none; } .m-rail-nav { display: flex; overflow-x: auto; } .m-rail-link { width: auto; flex: 0 0 auto; padding: 8px 10px; } .m-rail-link b { display: none; } .m-topbar { height: 56px; padding: 0 14px; } .m-chat-scroll { padding: 20px 14px 130px; } .m-welcome { padding-top: 28px; } .m-welcome h1 { font-size: 38px; } .m-starters { grid-template-columns: 1fr; } .m-composer-dock { right: 0; bottom: 0; left: 0; padding: 10px 10px 13px; } .m-old-page { padding: 14px; } }
+.m-pending { margin-top: 8px; color: #8fa3b3; font-size: 13px; }
+.m-pending::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: #5fb3a3; animation: m-pulse 1.2s ease-in-out infinite; }
+@keyframes m-pulse { 50% { opacity: .3; } }
+.m-agent-review { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #d8a54a; background: rgba(216, 165, 74, .08); color: #e6cfa2; font-size: 13px; }
+.m-message-text code { padding: 1px 5px; border-radius: 4px; background: rgba(255, 255, 255, .08); font-size: 13px; }
+.m-agent-route { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #7a8fa3; background: rgba(122, 143, 163, .1); color: #c3cfda; font-size: 13px; }
+.m-agent-route.private { border-left-color: #5fb3a3; background: rgba(95, 179, 163, .1); color: #bfe3db; }
+.m-private-toggle.on { border-color: #5fb3a3; color: #bfe3db; background: rgba(95, 179, 163, .12); }
+.m-attach { cursor: pointer; }
+.m-attach:focus-within { outline: 2px solid #5fb3a3; outline-offset: 2px; }

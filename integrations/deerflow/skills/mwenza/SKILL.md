@@ -1,6 +1,6 @@
 ---
 name: mwenza
-description: Use this skill to supervise and teach postgraduate researchers with Mwenza, an evidence-first research companion. Covers giving feedback on a proposal or thesis chapter, checking the golden thread (problem, gap, aim, objectives, questions, theory, design, analysis), checking paradigm-method fit, choosing a research design with the methodology navigator, finding open literature and preprints, and auditing whether citations say what the draft claims. Triggers on Mwenza, research proposal, thesis or dissertation feedback, research design or methodology, research questions, paradigm, literature search, citation check, supervisor or supervision. Requires the mwenza MCP server.
+description: Use this skill to supervise and teach postgraduate researchers with Mwenza, an evidence-first research companion. Covers giving feedback on a proposal or thesis chapter, checking the golden thread (problem, gap, aim, objectives, questions, theory, design, analysis), checking paradigm-method fit, choosing a research design with the methodology navigator, finding open literature and preprints, and auditing whether citations say what the draft claims, recomputing reported p-values and sample-size calculations, and running the student's own analysis on their uploaded data in an isolated sandbox. Triggers on Mwenza, analyse my data, run an analysis, p-value, sample size, power calculation, research proposal, thesis or dissertation feedback, research design or methodology, research questions, paradigm, literature search, citation check, supervisor or supervision. Requires the mwenza MCP server.
 version: 0.1.0
 allowed-tools:
   - search_literature
@@ -11,6 +11,10 @@ allowed-tools:
   - check_paradigm_fit
   - navigate_methodology
   - audit_citations
+  - check_reported_statistics
+  - check_sample_size
+  - run_analysis
+  - rerun_analysis
   - list_uploaded_files
   - ask_clarification
   - write_todos
@@ -42,7 +46,10 @@ asked to revise it; a second failure is sent to the student with labels. Follow 
    (`ask_clarification`); the tools refuse empty designs on purpose.
 5. **Checks are advice, not verdicts.** Report what a check flagged and why, with its teaching note. Never say a
    design "passes" or is "approved"; the supervisor decides.
-6. **Never reconstruct a source.** `audit_citations` needs the text of each cited source. Ask the student to
+6. **Never run code without the student's go-ahead.** Read the file's first lines so you use its real column names,
+   show the plan (which file, which test, what will be printed or saved), ask, and pass their reply, quoted exactly,
+   as `approval`. The sandbox refuses anything else.
+7. **Never reconstruct a source.** `audit_citations` needs the text of each cited source. Ask the student to
    paste or upload it; do not rebuild it from memory or from an abstract.
 
 ## Workflows
@@ -55,6 +62,8 @@ Pick one, tell the student which one and why, then follow it. Details: `referenc
 | Help choosing a design or method | **Navigator** | `navigate_methodology`, then `check_paradigm_fit` on what they choose |
 | Literature on a topic | **Literature search** | `search_literature`, `lookup_doi`, `get_citations`, `check_published_version` |
 | To know if citations support their claims | **Citation audit** | `audit_citations` |
+| To check results or a sample size | **Reproducer** | `check_reported_statistics`, `check_sample_size` |
+| To analyse their uploaded data | **Sandbox analysis** | `list_uploaded_files`, `run_analysis`, `rerun_analysis` |
 
 ## Shape of every reply
 

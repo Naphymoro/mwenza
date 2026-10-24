@@ -216,4 +216,77 @@ Every critique must cite the student's own text, a check result or a source. Ung
 - **Ghost-writing turn:** the agent declined. It gave the four moves of a problem statement and a labelled example on a different topic.
 - **Literature turn:** stopped by the daily cap. It also exposed that DeerFlow offloads large tool results to files, which led to recording evidence when a tool returns.
 
-Still open: the literature turn on a fresh allowance, the UI connection to the gateway, and model routing.
+**UI connection (2026-10-17):** the research chat page now runs on the `mwenza` agent through the engine (`/agent/chat`). The engine uses DeerFlow's Internal Auth, and the page shows the agent's steps and only the final, constitution-checked reply. The full path (browser → engine → DeerFlow) was tested in a browser at desktop and phone widths. Every chat shares one DeerFlow owner until Mwenza has student sign-in.
+
+Still open: the literature turn on a fresh allowance, and model routing.
+
+## 8. Model routing (analysis, 2026-10-18)
+
+**Models now available to DeerFlow:**
+- **Hosted:** `mwenza-glm` (GLM-5.3-Flash on Workers AI, `integrations/workers-ai`). Capped at 3,000 Neurons a day, which is about three supervision turns, since one costs about 1,000.
+- **Local:** `mwenza-local-8b` and `mwenza-local-14b` (Qwen3 with a 32k context) on this machine's RTX 2000 Ada. They're reached through the filtering `ollama-relay` (`integrations/local-models`), which serves only chat completions for named models, with a token. They cost no Neurons. Each first call loads the model (8B: 16 s, 14B: 32 s); after that a call with a 17,000-token prompt takes 1.2 s (8B) or 1.8 s (14B). The `mwenza` agent's first call is about 9,600 tokens.
+
+**What the H0 test showed** (synthetic student, production path, same three turns):
+
+| | GLM (hosted) | Qwen3 14B (local) |
+| --- | --- | --- |
+| Proposal feedback | Read the skill, ran both checks, explained the planted conflict, ended with a question | Ran the golden-thread check and relayed its teaching notes; fuller but more generic |
+| "Write my problem statement" | Declined; gave the four moves and an example on another topic | Wrote it, twice; on the revision it relabelled the student's paragraph as an "example". The constitution now withholds it |
+| Literature | Interrupted by the daily cap | Searched, then invented a DOI; the constitution labelled it as unverified |
+
+The local 14B model is a capable tool caller, but it doesn't hold Mwenza's teaching stance on its own. With the constitution as the safety net it fails safely, but the student gets less.
+
+**Options:**
+1. **Fallback to local.** The hosted model leads. When it's unavailable or over its cap, the turn continues on `mwenza-local-14b`, and the reply says so. This keeps Mwenza available beyond about three turns a day. Cost: weaker supervision on fallback turns, with the constitution as the guard.
+2. **Private threads stay local.** The student marks a chat as private (for example, it contains interview transcripts or health data), and every call in it uses the local model, so the data never leaves the machine. The page offers private or standard, never a model name; the engine maps that choice to a model.
+3. **Task routing through sub-agents.** The hosted lead delegates bulky, low-judgement work (searching, reading and condensing results) to a local "librarian" sub-agent. That saves hosted tokens, but it needs the evidence ledger to work across the thread, because today the constitution trusts only the lead's own tool results. It fits with H2's sub-agents.
+
+**Recommendation:** build 1 and 2 now. Both are small: a routing middleware in `mwenza_deerflow` for fallback, plus the engine's existing operator model setting extended to a private-thread policy. Leave 3 for H2.
+
+**Decision and build (2026-10-18):** options 1 and 2 are built.
+- **Fallback:** `MwenzaModelFallbackMiddleware`.
+- **Private chats:** the engine's `MWENZA_DEERFLOW_PRIVATE_MODEL` plus a sticky thread flag.
+- **Page:** a private toggle and a note on each reply saying which model answered.
+- **Tested live:** with GLM over its cap, a standard chat continued on the local 14B model and said so. A private chat ran locally and never tried GLM. Option 3 waits for H2.
+
+The local model also exposed two constitution gaps, now closed. Writing tools are refused for the `mwenza` agent. Paste-ready prose is detected by:
+- an offer to paste;
+- an "example" on the student's own topic;
+- a lower length bar.
+
+After a failed revision, that prose is withheld rather than labelled.
+
+## 9. H1 progress and the sandbox decision (2026-10-18)
+
+**H1a, the Reproducer checks (built):** `backend/src/mwenza_engine/reproducer.py`, exposed as the `check_reported_statistics` and `check_sample_size` MCP tools, with a new Reproducer workflow in the skill. H1's "done when" holds on synthetic papers:
+- In a seeded results section, every planted error is caught: a mistyped p (inconsistent), and a non-significant result reported as p = .03 (decision error). A one-tailed p is flagged with a note. The six correct results pass.
+- A seeded power calculation ("30 per group" where 64 are needed) is flagged as too small, with its real power of about 47%.
+- Accuracy is pinned against SciPy and statsmodels reference values.
+
+**H1b, the research sandbox (to decide).** This is for running a student's own analysis (Python or R on their uploaded data) and returning the outputs as computed evidence with a reproducibility capsule.
+- **A. DeerFlow's AIO sandbox, as §4 proposed.** This switches DeerFlow's sandbox globally, for NDIM too. The gateway needs the Docker socket, which is root-equivalent. The agent gets a general shell, so provenance has to be reconstructed from whatever commands it ran. DeerFlow's network allowlist and approval prompt come built in (Docker 29 here meets its 28+ requirement).
+- **B. A Mwenza-owned runner.** One MCP tool, `run_analysis(language, code, inputs, approval)`. A host-side runner, reached over a Unix socket like the Ollama bridge, starts a pinned research image with:
+  - no network;
+  - a read-only root;
+  - every Linux capability dropped;
+  - CPU, memory, process and time limits;
+  - inputs mounted read-only.
+
+  Every run returns a capsule: code hash, input hashes, image digest, the command, the outputs and their hashes. The capsule enters the evidence store as computed evidence. No container holds the Docker socket, and DeerFlow's other agents are untouched. Network grants (for example CRAN or PyPI) come later through an allowlisting proxy, only if baked-in packages prove insufficient.
+
+**Recommendation:** B. It keeps the sandbox scoped to Mwenza, makes provenance exact rather than reconstructed, and avoids giving the gateway root-equivalent access.
+
+**H1b decision and build (2026-10-18):** option B, the Mwenza-owned runner (`integrations/sandbox`).
+- **Image:** `mwenza-research:1`, Python 3.12 and R 4.2 with the usual statistics packages, 338 MB.
+- **Runner:** a host runner reached over a Unix socket.
+- **Tools:** `run_analysis` and `rerun_analysis`.
+- **Approval:** a checkpoint in the constitution middleware.
+- **Identity:** the thread's owner and id are forwarded out-of-band by the engine.
+- **Page:** an "Attach data" button.
+
+The runner's isolation tests pass against real Docker. In the browser, on the local fallback model, a student attached a synthetic CSV. The agent planned without running anything, the student approved, and the analysis ran in the sandbox. The reply's numbers match the capsule's output.
+
+Not yet:
+- the network allowlist;
+- recording capsules in the provenance ledger;
+- checking a reply's numbers against its capsule.

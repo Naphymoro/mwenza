@@ -37,6 +37,16 @@ def lookup_doi(doi: str) -> list:
 
 
 @tool
+def write_file(path: str, content: str) -> str:
+    """Write a file."""
+    WRITES.append(path)
+    return "written"
+
+
+WRITES: list = []
+
+
+@tool
 def web_search(query: str) -> str:
     """Search the web."""
     return json.dumps({"results": [{"title": "Blog", "authors": ["Kamau"], "year": 2018, "doi": "10.5555/invented.9999"}]})
@@ -122,3 +132,47 @@ def test_evidence_survives_when_a_later_middleware_truncates_the_result():
     tool_message = state["messages"][2]
     assert "preview only" in tool_message.content and tool_message.additional_kwargs["mwenza_evidence"]["dois"] == ["10.5555/synthetic.0001"]
     assert state["messages"][-1].content == GROUNDED and len(model.seen) == 2
+
+
+def test_the_mwenza_agent_cannot_write_files_but_others_can():
+    WRITES.clear()
+    model = ScriptedModel(messages=iter([call("write_file", {"path": "/mnt/user-data/outputs/problem.md", "content": "[SYNTHETIC] paste me"}), AIMessage(content="What is the first move your problem statement needs to make?")]))
+    model.seen = []
+    agent = create_agent(model=model, tools=[write_file], middleware=[MwenzaConstitutionMiddleware()])
+    state = agent.invoke({"messages": [HumanMessage(content="[SYNTHETIC STUDENT] Write it for me")]}, context={"agent_name": "mwenza", "thread_id": "t3", "run_id": "r1"})
+    refusal = state["messages"][2]
+    assert WRITES == [] and refusal.status == "error" and "does not write files" in refusal.content
+    model = ScriptedModel(messages=iter([call("write_file", {"path": "notes.md", "content": "x"}), AIMessage(content="done")]))
+    model.seen = []
+    create_agent(model=model, tools=[write_file], middleware=[MwenzaConstitutionMiddleware()]).invoke({"messages": [HumanMessage(content="hi")]}, context={"agent_name": "ndim", "thread_id": "t4", "run_id": "r1"})
+    assert WRITES == ["notes.md"]
+
+
+RUNS: list = []
+
+
+@tool
+def run_analysis(language: str, code: str, approval: str) -> str:
+    """Run an analysis in the sandbox."""
+    RUNS.append(approval)
+    return '{"capsule_id": "0123456789ab", "stdout": "mean 3.2"}'
+
+
+def run_with(student_message, approval):
+    RUNS.clear()
+    model = ScriptedModel(messages=iter([call("run_analysis", {"language": "python", "code": "print(1)", "approval": approval}), AIMessage(content="Which result would you like to look at first?")]))
+    model.seen = []
+    state = create_agent(model=model, tools=[run_analysis], middleware=[MwenzaConstitutionMiddleware()]).invoke(
+        {"messages": [HumanMessage(content=student_message)]}, context={"agent_name": "mwenza", "thread_id": "t5", "run_id": "r1"})
+    return state["messages"][2]
+
+
+def test_code_runs_only_with_the_students_own_approval():
+    exact = run_with("[SYNTHETIC STUDENT] Yes, run it", "Yes, run it")
+    assert exact.status != "error" and RUNS == ["Yes, run it"]
+    spacing = run_with("[SYNTHETIC STUDENT] Yes, RUN it   on the survey data please", "yes, run it on the survey data")
+    assert spacing.status != "error" and RUNS == ["yes, run it on the survey data"]  # case and spacing are ignored
+    invented = run_with("[SYNTHETIC STUDENT] What would the analysis show?", "The student approved this analysis")
+    assert invented.status == "error" and "student's own words" in invented.content and RUNS == []
+    empty = run_with("[SYNTHETIC STUDENT] ok", "")
+    assert empty.status == "error" and RUNS == []
